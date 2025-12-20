@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8">
+    <title>WhisperLocus</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+
+    <script src='https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css' rel='stylesheet' />
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&display=swap" rel="stylesheet">
+    
+<style>
+/* ---------------------------------------------------- */
+/* 基礎佈局 */
+/* ---------------------------------------------------- */
+*, ::before, ::after { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden; /* 防止地圖出現外部捲軸 */
+    background-color: #f0f0f0;
+}
+
+#map-container {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    z-index: 1;
+}
+
+/* ---------------------------------------------------- */
+/* 左上角控制面板 */
+/* ---------------------------------------------------- */
+#left-top-controls {
+    position: absolute;
+    z-index: 10; 
+    top: 20px; 
+    left: 20px; 
+    width: 280px; 
+    max-width: 90%;
+    pointer-events: none; /* 穿透到地圖，除非是子元素 */
+}
+
+#left-top-controls > * {
+    pointer-events: auto; /* 讓按鈕和輸入框可點擊 */
+}
+
+#logo-header {
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px rgba(255,255,255,0.8);
+}
+
+#main-logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 36px;
+    font-weight: 600; 
+    color: #333;
+    margin: 0;
+    line-height: 1;
+}
+
+#sub-slogan {
+    font-family: 'Arial', sans-serif;
+    font-size: 15px;
+    color: #666;
+    margin: 5px 0 0 0;
+}
+
+/* 控制項樣式 */
+#leave-post-link {
+    display: block;
+    width: 100%;
+    background-color: #ff5722; 
+    color: white; 
+    text-decoration: none;
+    padding: 12px; 
+    border-radius: 8px;
+    font-weight: Regular; 
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    margin-bottom: 12px;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+#leave-post-link:hover {
+    background-color: #e64a19;
+    transform: translateY(-2px);
+}
+
+#code-search-form {
+    width: 100%;
+}
+
+#code-input {
+    width: 100%; 
+    padding: 12px; 
+    font-size: 14px;
+    border-radius: 8px; 
+    border: 1px solid rgba(0,0,0,0.1); 
+    background: white; 
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); 
+    text-align: center;
+    outline: none;
+}
+
+#code-search-message {
+    font-size: 12px; 
+    color: #ff5722;
+    margin-top: 8px;
+    text-align: center;
+    font-weight: bold;
+    min-height: 18px;
+    /* 🎯 加入漸變效果讓消失更自然 */
+    transition: opacity 0.8s ease;
+    opacity: 1;
+}
+
+/* ---------------------------------------------------- */
+/* 🎯 Popup 便利貼樣式 (對應 map.js) */
+/* ---------------------------------------------------- */
+.custom-memo-popup .mapboxgl-popup-content {
+    background-color: #FFFEF9 !important; /* 便利貼米白 */
+    border-radius: 2px !important;
+    box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.2) !important;
+    padding: 0 !important;
+    width: 300px !important; /* 桌面端寬度 */
+    min-height: 250px !important;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 移動端寬度調整 */
+@media (max-width: 480px) {
+    .custom-memo-popup .mapboxgl-popup-content {
+        width: 80vw !important;
+    }
+}
+
+.emotion-popup-content-wrapper {
+    padding: 35px 20px 40px 25px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    height: 100%;
+}
+
+/* 短文置中模式 (由 map.js 動態加入) */
+.mapboxgl-popup-content.is-centered-text .memo-content-text {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    margin: auto !important;
+    font-size: 18px !important;
+    line-height: 1.6;
+}
+
+/* 長文一般模式 */
+.memo-content-text {
+    font-size: 15px;
+    line-height: 1.7;
+    color: #333;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 10px 0;
+    overflow-y: auto;
+    max-height: 200px;
+}
+
+/* 裝飾文字 */
+.popup-code-label { position: absolute; top: 10px; left: 15px; font-size: 11px; color: #999; font-family: Arial, sans-serif; }
+.popup-location-label { position: absolute; bottom: 10px; left: 15px; font-size: 11px; color: #777; font-family: Arial, sans-serif; }
+.popup-bottom-right { position: absolute; bottom: 10px; right: 15px; font-size: 11px; color: #999; font-family: Arial, sans-serif;}
+
+/* 刪除按鈕 */
+.popup-delete-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: 1px solid;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 10px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+.popup-delete-btn:hover { opacity: 1; }
+
+</style>
+</head>
+
+<body>
+    <div id="map-container"></div> 
+    
+    <div id="left-top-controls">
+        <div id="logo-header">
+            <h1 id="main-logo">WhisperLocus</h1>
+            <p id="sub-slogan">For the words we never got to say.</p>
+        </div>
+
+        <a href="post.html" id="leave-post-link">
+            Leave a whisper.
+        </a>
+        
+        <form id="code-search-form">
+            <input type="text" id="code-input" placeholder="Search by Code" maxlength="8" required autocomplete="off">
+            <div id="code-search-message"></div>
+        </form>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            getDocs, 
+            doc, 
+            deleteDoc, 
+            query, 
+            where, 
+            serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDFED1K3dpMYaUpj8DlJWI1SnqgfFWzy44",
+            authDomain: "whisperlocus.firebaseapp.com",
+            projectId: "whisperlocus",
+            storageBucket: "whisperlocus.firebasestorage.app",
+            messagingSenderId: "801292984890",
+            appId: "1:801292984890:web:0c064b4c206a8000f84b03",
+            measurementId: "G-TCB2PWSN1C"
+        };
+
+        // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+      
+        // 將必要的 Firebase 工具掛載到 window，供 map.js 使用
+        window.db = db;
+        window.collection = collection;
+        window.getDocs = getDocs;
+        window.doc = doc;
+        window.deleteDoc = deleteDoc;
+        window.query = query;
+        window.where = where;
+        window.serverTimestamp = serverTimestamp;
+
+        console.log("🔥 Firebase Ready for Map Operations");
+    </script>
+
+    <script src="map.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const msgBox = document.getElementById('code-search-message');
+            let hideTimeout = null;
+
+            // 核心功能：執行隱藏動畫
+            const startHideTimer = () => {
+                // 如果文字是空的就不執行
+                if (msgBox.textContent.trim() === "") return;
+
+                // 清除之前的計時器，避免多次觸發衝突
+                if (hideTimeout) clearTimeout(hideTimeout);
+
+                // 4 秒後開始淡出
+                hideTimeout = setTimeout(() => {
+                    msgBox.style.opacity = "0";
+                    
+                    // 等淡出動畫結束 (800ms) 後清空文字並恢復透明度，為下次顯示做準備
+                    setTimeout(() => {
+                        msgBox.textContent = "";
+                        msgBox.style.opacity = "1";
+                    }, 800);
+                }, 4000);
+            };
+
+            // 1. 處理 URL 帶來的 code (發佈成功跳轉時)
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            if (code) {
+                msgBox.textContent = `找到貼文 "${code}"`;
+                startHideTimer();
+            }
+
+            // 2. 監聽 `#code-search-message` 的變化 (處理由 map.js 產生的搜尋結果)
+            const observer = new MutationObserver(() => {
+                if (msgBox.textContent.trim() !== "") {
+                    msgBox.style.opacity = "1"; // 確保文字變更時是可見的
+                    startHideTimer();
+                }
+            });
+
+            observer.observe(msgBox, { childList: true, characterData: true, subtree: true });
+        });
+    </script>
+
+</body>
+</html>
