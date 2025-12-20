@@ -147,18 +147,50 @@ html, body {
 
 .about-content {
     position: relative;
-    max-width: 550px;
-    width: 85%;
-    padding: 40px;
+    max-width: 700px;
+    width: 90%;
+    max-height: 85vh;          /* 限制最大高度為螢幕的 85% */
+    padding: 50px 40px;
     color: #1a1a1a;
     font-family: 'Arial', sans-serif;
     line-height: 1.8;
     text-align: center;
+ 
+    /* 📜 開啟捲軸功能 */
+    overflow-y: auto;          
+    background: rgba(255, 255, 255, 0.2); /* 淡淡的內框感 */
+    border-radius: 15px;
 }
 
+/* ✨ 自定義捲軸樣式 (讓它變細、不突兀) */
+.about-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.about-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.about-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+
+.about-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+/* 讓段落間距更有層次 */
 .about-content p {
-    margin-bottom: 24px;
+    margin-bottom: 28px;
     font-size: 16px;
+    letter-spacing: 0.3px;
+}
+/* 移動端微調：縮小內距以爭取空間 */
+@media (max-width: 480px) {
+    .about-content {
+        padding: 40px 20px;
+        width: 95%;
+    }
 }
 
 .about-highlight {
