@@ -204,6 +204,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setupInteraction();
         await loadWhispersFromFirebase();
+
+        await loadWhispersFromFirebase();
+        
+        // ✨ 新增：發文後自動飛行邏輯
+        const urlParams = new URLSearchParams(window.location.search);
+        const postCode = urlParams.get('code');
+
+        if (postCode) {
+            // 給予 1 秒延遲，確保 Firebase 資料載入並渲染到地圖 Source 上
+            setTimeout(() => {
+                console.log("偵測到發文代碼，執行飛行:", postCode);
+                searchAndFlyToPost(postCode.toUpperCase());
+
+                // (選做) 清除網址參數，避免使用者重新整理頁面時又飛一次
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+            }, 1000);
+        }
+
         startSmoothPulsing(Date.now());
     });
 });
@@ -231,7 +250,18 @@ function applyLanguage() {
 function buildPopupContent(props) {
     const lang = i18n[currentLangKey] || i18n['zh'];
     const enforcedColor = props.color || EMOTION_COLORS['REGRET'].color;
-    let deleteBtn = window.isAdminMode ? `<button class="popup-delete-btn" style="color:${enforcedColor}; border-color:${enforcedColor};">✕ ${lang.popupLabelDelete}</button>` : '';
+    let deleteBtn = window.isAdminMode
+        ? `<button class="popup-delete-btn" data-id="${props.id}" data-code="${props.code}" style="color:${enforcedColor}; border-color:${enforcedColor};">✕ ${lang.popupLabelDelete}</button>`
+        : '';
+
+    // ✨ 新增：格式化地點字串 (只取 County, Country)
+    let displayLocation = props.locationText || '';
+    if (displayLocation.includes(',')) {
+        const parts = displayLocation.split(',').map(p => p.trim());
+        if (parts.length > 2) {
+            displayLocation = `${parts[parts.length - 2]}, ${parts[parts.length - 1]}`;
+        }
+    }
 
     return `
         <div class="mapboxgl-popup-content is-expanded">
@@ -276,10 +306,38 @@ async function loadWhispersFromFirebase() {
 
 function setupInteraction() {
     map.on('click', 'clusters', (e) => {
-        const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
-        map.getSource('emotion-posts').getClusterExpansionZoom(features[0].properties.cluster_id, (err, zoom) => {
-            if (!err) map.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
-        });
+        const feature = e.features[0];
+        const props = { id: feature.properties.id, ...feature.properties }; // ✨ 確保抓到 ID
+        const coords = feature.geometry.coordinates.slice();
+        map.flyTo({ center: coords, zoom: 15 });
+        const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, className: 'custom-memo-popup' })
+            .setLngLat(coords).setHTML(buildPopupContent(props)).addTo(map);
+        activePopups.push(popup);
+    });
+
+    // ✨ 新增：處理刪除按鈕點擊 (事件代理)
+    document.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('popup-delete-btn')) {
+            const docId = e.target.getAttribute('data-id');
+            const postCode = e.target.getAttribute('data-code');
+            const lang = i18n[currentLangKey] || i18n['zh'];
+
+            if (!docId || docId === "undefined") {
+                return alert("錯誤：找不到貼文 ID，無法刪除。");
+            }
+
+            if (confirm(`確定要刪除貼文 ${postCode} 嗎？此動作無法復原。`)) {
+                try {
+                    await window.deleteDoc(window.doc(window.db, "posts", docId));
+                    alert(lang.deleteSuccess(postCode));
+                    closeAllPopups();
+                    await loadWhispersFromFirebase(); // 刷新地圖
+                } catch (err) {
+                    console.error("刪除失敗:", err);
+                    alert("❌ 刪除失敗，請檢查管理員權限設定。");
+                }
+            }
+        }
     });
 
     map.on('click', 'unclustered-point', (e) => {
@@ -367,4 +425,5 @@ async function searchAndFlyToPost(code) {
 }
 
 function closeAllPopups() { activePopups.forEach(p => p.remove()); activePopups = []; }
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllPopups(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllPopups(); 
+});

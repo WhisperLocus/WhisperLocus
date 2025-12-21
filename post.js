@@ -39,102 +39,84 @@ document.addEventListener('DOMContentLoaded', () => {
         return randomHex.substring(0, 3) + '-' + randomHex.substring(3, 7);
     };
 
-const reverseGeocode = async (lng, lat) => {
-    // 將語言設定為英文 'en'
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?language=en&access_token=${MAPBOX_TOKEN}`;
-    
-    try {
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        if (data.features && data.features.length > 0) {
-            const feature = data.features[0];
-            let county = "";
-            let country = "";
+    const reverseGeocode = async (lng, lat) => {
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?language=en&access_token=${MAPBOX_TOKEN}`;
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.features && data.features.length > 0) {
+                const feature = data.features[0];
+                const context = feature.context; // 這裡包含層級資訊
+                
+                let county = "";
+                let country = "";
 
-            // 從 context 陣列中精確尋找 Place (城市) 與 Country (國家)
-            if (feature.context) {
-                feature.context.forEach(item => {
-                    if (item.id.includes('place')) county = item.text;
-                    if (item.id.includes('country')) country = item.text;
-                });
-            }
+                // 💡 邏輯：從 context 中尋找特定的層級 (place = 縣市, country = 國家)
+                if (context) {
+                    context.forEach(item => {
+                        if (item.id.includes('place')) county = item.text;
+                        if (item.id.includes('country')) country = item.text;
+                    });
+                }
 
-            // 如果沒有抓到 place (城市)，嘗試抓取 region (區域/省份)
-            if (!county && feature.context) {
-                const region = feature.context.find(item => item.id.includes('region'));
-                if (region) county = region.text;
+                // 如果有抓到縣市與國家，就組合起來；否則抓取 place_name 的最後兩段
+                if (county && country) {
+                    return `${county}, ${country}`;
+                } else {
+                    const parts = feature.place_name.split(',').map(p => p.trim());
+                    return parts.length >= 2 
+                        ? `${parts[parts.length - 2]}, ${parts[parts.length - 1]}` 
+                        : feature.place_name;
+                }
             }
-
-            // 根據抓取到的結果組合格式
-            if (county && country) {
-                return `${county}, ${country}`;
-            } else if (country) {
-                return country;
-            } else {
-                // 若都抓不到，回傳該位置的主要地名
-                return feature.text || `Coordinates (${lng.toFixed(4)}, ${lat.toFixed(4)})`;
-            }
+            return `座標 (${lng.toFixed(4)}, ${lat.toFixed(4)})`;
+        } catch (error) {
+            console.error("Geocoding error:", error);
+            return `座標 (${lng.toFixed(4)}, ${lat.toFixed(4)})`;
         }
-        return `Coordinates (${lng.toFixed(4)}, ${lat.toFixed(4)})`;
-    } catch (error) {
-        console.error('Geocoding Error:', error);
-        return `Coordinates (${lng.toFixed(4)}, ${lat.toFixed(4)})`;
-    }
-};
+    };
 
-// 3. 更新位置狀態與 UI 顯示
-const updateLocationState = async (lng, lat) => {
-    selectedLongitude = lng;
-    selectedLatitude = lat;
-    
-    // UI 反饋
-    mapStatusDiv.textContent = '🔍 Resolving address...';
-    
-    // 取得英文格式地址
-    selectedPlaceName = await reverseGeocode(lng, lat);
-    
-    // 更新地圖下方的狀態文字 (同步顯示為英文)
-    mapStatusDiv.textContent = `📍 Selected: ${selectedPlaceName}`;
-    
-    // 啟用確認按鈕
-    confirmLocationButton.disabled = false;
-};
+    const updateLocationState = async (lng, lat) => {
+        selectedLongitude = lng;
+        selectedLatitude = lat;
+        mapStatusDiv.textContent = '🔍 正在解析地址...';
+        selectedPlaceName = await reverseGeocode(lng, lat);
+        mapStatusDiv.textContent = `📍 已選定：${selectedPlaceName}`;
+        confirmLocationButton.disabled = false;
+    };
 
-// 4. 初始化地圖
-const initializeMap = (center) => {
-    if (isMapInitialized) {
-        map.jumpTo({ center: center });
-        marker.setLngLat(center);
-        return;
-    }
+    const initializeMap = (center) => {
+        if (isMapInitialized) {
+            map.jumpTo({ center: center });
+            marker.setLngLat(center);
+            return;
+        }
 
-    mapboxgl.accessToken = MAPBOX_TOKEN;
-    map = new mapboxgl.Map({
-        container: 'location-map',
-        style: 'mapbox://styles/mapbox/light-v11',
-        center: center,
-        zoom: 14
-    });
+        mapboxgl.accessToken = MAPBOX_TOKEN;
+        map = new mapboxgl.Map({
+            container: 'location-map',
+            style: 'mapbox://styles/mapbox/light-v11',
+            center: center,
+            zoom: 14
+        });
 
-    marker = new mapboxgl.Marker({ draggable: true, color: "#ff5722" })
-        .setLngLat(center)
-        .addTo(map);
+        marker = new mapboxgl.Marker({ draggable: true, color: "#ff5722" })
+            .setLngLat(center)
+            .addTo(map);
 
-    // 拖拽標記結束後更新
-    marker.on('dragend', () => {
-        const lngLat = marker.getLngLat();
-        updateLocationState(lngLat.lng, lngLat.lat);
-    });
+        marker.on('dragend', () => {
+            const lngLat = marker.getLngLat();
+            updateLocationState(lngLat.lng, lngLat.lat);
+        });
 
-    // 點擊地圖任意處移動標記並更新
-    map.on('click', (e) => {
-        marker.setLngLat(e.lngLat);
-        updateLocationState(e.lngLat.lng, e.lngLat.lat);
-    });
+        map.on('click', (e) => {
+            marker.setLngLat(e.lngLat);
+            updateLocationState(e.lngLat.lng, e.lngLat.lat);
+        });
 
-    isMapInitialized = true;
-};
+        isMapInitialized = true;
+    };
 
     // ----------------------------------------------------------------
     // 🎯 事件監聽
