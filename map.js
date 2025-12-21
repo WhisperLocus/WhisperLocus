@@ -13,7 +13,7 @@ window.isAdminMode = false;
 
 const ADMIN_PASSWORD = 'joislove'; 
 const ADMIN_KEY = 'IMRIGHT';    
-const baseRadius = 5; 
+const baseRadius = 4; 
 const defaultCenter = [134.1031, 34.4878]; 
 
 const EMOTION_COLORS = {
@@ -161,8 +161,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 'circle-color': colorExpr,
                 'circle-radius': [
                     'interpolate', ['linear'], ['zoom'],
-                    10, baseRadius * 0.8,
-                    15, baseRadius * 1.5
+                    3, baseRadius * 0.6,  // 極小縮放時
+                    10, baseRadius * 0.8, // 中等縮放
+                    15, baseRadius * 1.0  // 放大後
                 ],
                 'circle-opacity': 1,
                 'circle-stroke-width': 0
@@ -193,8 +194,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 'circle-color': ['get', 'color'],
                 'circle-radius': [
                     'interpolate', ['linear'], ['zoom'],
-                    10, baseRadius * 0.8,
-                    15, baseRadius * 1.5
+                    3, baseRadius * 0.6,  // 極小縮放時
+                    10, baseRadius * 0.8, // 中等縮放
+                    15, baseRadius * 1.0  // 放大後
                 ],
                 'circle-stroke-width': 0
             }
