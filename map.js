@@ -318,15 +318,52 @@ async function searchAndFlyToPost(code) {
     try {
         const q = window.query(window.collection(window.db, "posts"), window.where("code", "==", code.toUpperCase()));
         const snap = await window.getDocs(q);
+        
         if (snap.empty) throw new Error(i18n[currentLangKey].searchErrorNotFound);
+        
         const post = snap.docs[0].data();
         const coords = [post.longitude, post.latitude];
-        map.flyTo({ center: coords, zoom: 15 });
-        setTimeout(() => {
-            new mapboxgl.Popup({ offset: 25, closeButton: false, className: 'custom-memo-popup' })
-                .setLngLat(coords).setHTML(buildPopupContent(post)).addTo(map);
-        }, 1200);
-    } catch (e) { document.getElementById('code-search-message').textContent = e.message; }
+
+        // --- 🎯 格式化數據：確保與 postsToGeoJSON 產出的格式一致 ---
+        const emotion = (post.emotion || 'REGRET').toUpperCase();
+        let formattedDate = '';
+        if (post.createdAt) {
+            const date = post.createdAt.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
+            formattedDate = new Intl.DateTimeFormat('en-US', { 
+                month: 'short', 
+                day: '2-digit', 
+                year: 'numeric' 
+            }).format(date);
+        }
+
+        const formattedProps = {
+            ...post,
+            emotion: emotion,
+            color: (EMOTION_COLORS[emotion] || EMOTION_COLORS['REGRET']).color,
+            createdAt: formattedDate // 將 Timestamp 物件轉為格式化字串
+        };
+
+        // --- 🚀 飛行並顯示 Popup ---
+        map.flyTo({ center: coords, zoom: 15, speed: 1.2 });
+
+        // 使用 once('moveend') 確保在飛行停止後才彈出，避免位置偏移
+        map.once('moveend', () => {
+            closeAllPopups(); // 顯示新彈窗前先關閉舊的
+            const popup = new mapboxgl.Popup({ 
+                offset: 25, 
+                closeButton: false, 
+                className: 'custom-memo-popup' 
+            })
+            .setLngLat(coords)
+            .setHTML(buildPopupContent(formattedProps)) 
+            .addTo(map);
+
+            activePopups.push(popup);
+        });
+    } catch (e) { 
+        const msgEl = document.getElementById('code-search-message');
+        if (msgEl) msgEl.textContent = e.message; 
+    }
 }
 
 function closeAllPopups() { activePopups.forEach(p => p.remove()); activePopups = []; }
