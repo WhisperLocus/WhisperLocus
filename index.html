@@ -248,7 +248,20 @@ html, body {
     word-break: break-word;
     margin: 10px 0;
     overflow-y: auto;
-    max-height: 200px;
+    max-height: 180px;
+
+    /* ✨ 新增：置中核心邏輯 */
+    flex-grow: 1;          /* 讓內容區塊撐開 */
+    display: flex;         /* 使用 Flexbox */
+    flex-direction: column;  /* 改為直向排列 */
+    justify-content: center; /* 短文時垂直置中 */
+}
+
+/* ✨ 針對長貼文的關鍵：當內容溢出時，自動改回靠頂部對齊 */
+.memo-content-text::before,
+.memo-content-text::after {
+    content: "";
+    flex-grow: 1;
 }
 
 .popup-code-label { position: absolute; top: 10px; left: 15px; font-size: 11px; color: #999; font-family: Arial, sans-serif; }
