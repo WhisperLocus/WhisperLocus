@@ -90,8 +90,8 @@ html, body {
 #sub-slogan {
     font-family: 'Arial', sans-serif;
     font-size: 11px;
-    color: #888;
-    margin: 8px 0 0 0;
+    color: #555;
+    margin: 4px 0 0 0;
     letter-spacing: 0.5px;
 }
 
@@ -122,6 +122,7 @@ html, body {
     top: 90px;
     right: 40px;
     width: 250px;
+    height: 140px;
     background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
@@ -144,7 +145,7 @@ html, body {
 #leave-post-link {
     display: block;
     width: 100%;
-    background-color: #333; 
+    background-color: #ff5722; 
     color: white; 
     text-decoration: none;
     padding: 12px; 
@@ -155,7 +156,7 @@ html, body {
     transition: background 0.2s;
 }
 
-#leave-post-link:hover { background-color: #000; }
+#leave-post-link:hover { background-color: #ff5722; }
 
 #code-input {
     width: 100%; 
@@ -305,8 +306,63 @@ html, body {
         document.addEventListener('DOMContentLoaded', () => {
             // --- 1. 多國語言內容 ---
             const translations = {
-                'zh': `<p>WhisperLocus 是一個公開的匿名地圖。</p><p>它為那些未曾找到合適時機說出口的<br>思緒、記憶與情感而存在。</p><p>每一則貼文都是匿名的，公開的。<br>它們錨定於特定的空間。</p><p class="about-highlight">你可以不在這裡留下任何東西，<br>僅僅只是瀏覽也是沒問題的。</p>`,
-                'en': `<p>WhisperLocus is a public, anonymous map.</p><p>It exists for thoughts, memories, and feelings<br>that never found the right moment to be spoken.</p><p class="about-highlight">You don’t have to leave anything here.<br>You’re allowed to just look.</p>`
+                'zh': `
+                    <p>WhisperLocus 是一個公開的匿名地圖。
+                    <p>它為那些未曾找到合適時機說出口的<br>思緒、記憶與情感而存在。</p>
+                    <p>每一則貼文都是匿名的，<br>每一則貼文都是公開的。<br>它們錨定於特定的空間，<br>僅由唯一的代碼標記。</p>
+                    <p>這裡沒有個人檔案、沒有評論，也沒有回覆。
+                    <p>若貼文包含針對性的傷害、<br>露骨廣告或刻意濫用，<br>可能會被審核或移除。<br>審核的存在是為了守護這片寧靜。</p>
+                    <p class="about-highlight">你可以不在這裡留下任何東西，<br>僅僅只是瀏覽也是沒問題的。</p>
+                `,
+                'en': `
+                    <p>WhisperLocus is a public, anonymous map<br>where words are placed, not exchanged.</p>
+                    <p>It exists for thoughts, memories, and feelings<br>that never found the right moment to be spoken.</p>
+                    <p>Every post is anonymous. Every post is public.<br>Each one is anchored to a place, marked only by a unique code.</p>
+                    <p>There are no profiles, no comments, and no replies.<br>This is not a space for debate, persuasion, or promotion.</p>
+                    <p>Some posts may be moderated or removed if they contain targeted harm, explicit advertising, or deliberate misuse of the space.</p>
+                    <p>Moderation exists to protect the quiet,<br>not to shape what should be felt.</p>
+                    <p class="about-highlight">You don’t have to leave anything here.<br>You’re allowed to just look.</p>
+                `
+                ,
+                'fr': `
+                    <p>WhisperLocus est une carte publique et anonyme<br>où les mots sont déposés, non échangés.</p>
+                    <p>Elle existe pour les pensées, les souvenirs et les sentiments<br>qui n'ont jamais trouvé le moment propice pour être exprimés.</p>
+                    <p>Chaque publication est anonyme. Chaque publication est publique.<br>Chaque publication est ancrée à un lieu, marqué uniquement par un code unique.</p>
+                    <p>Il n'y a pas de profils, pas de commentaires, pas de réponses.<br>Ce n'est pas un espace de débat, de persuasion ou de promotion.</p>
+                    <p>Certaines publications peuvent être modérées ou supprimées si elles contiennent des propos malveillants, de la publicité explicite ou un usage abusif de l'espace.</p>
+                    <p>La modération est là pour préserver le silence,<br>et non pour influencer les sentiments.</p>
+                    <p class="about-highlight">Vous n'êtes pas obligé de publier quoi que ce soit.<br>Vous pouvez simplement regarder.</p>
+                `
+                ,
+                'jp': `
+                    <p>WhisperLocus は、言葉が交わされるのではなく、置かれる、公開された匿名の地図です。</p>
+                    <p>ここは、言葉にするべき瞬間がなかった考え、記憶、そして感情のために存在します。</p>
+                    <p>すべての投稿は匿名です。すべての投稿は公開されます。<br>それぞれの投稿は場所に紐付けられ、固有のコードによってのみマークされます。</p>
+                    <p>プロフィール、コメント、返信はありません。<br>ここは議論、説得、宣伝のための空間ではありません。</p>
+                    <p>特定の人物への危害、露骨な広告、または意図的な空間の悪用を含む投稿は、モデレートまたは削除される場合があります。</p>
+                    <p>モデレーションは静寂を守るために存在し、<br>人々の感情を形作るために存在するのではありません。</p>
+                    <p class="about-highlight">ここに何も残す必要はありません。<br>ただ見るだけで結構です。</p>
+                `
+                ,
+                'es': `
+                    <p>WhisperLocus es un mapa público y anónimo<br>donde se colocan las palabras, no se intercambian.</p>
+                    <p>Existe para pensamientos, recuerdos y sentimientos<br>que nunca encontraron el momento adecuado para expresarse.</p>
+                    <p>Todas las publicaciones son anónimas. Todas las publicaciones son públicas.<br>Cada una está anclada a un lugar, marcada únicamente por un código único.</p>
+                    <p>No hay perfiles, comentarios ni respuestas.<br>Este no es un espacio para debatir, persuadir ni promocionar.</p>
+                    <p>Algunas publicaciones pueden ser moderadas o eliminadas si contienen daño dirigido, publicidad explícita o mal uso deliberado del espacio.</p>
+                    <p>La moderación existe para proteger el silencio,<br>no para moldear lo que se debe sentir.</p>
+                    <p class="about-highlight">No tienes que dejar nada aquí.<br>Solo puedes mirar.</p>
+                `
+                ,
+                'ko': `
+                    <p>위스퍼로커스는 익명으로 운영되는 공개 지도입니다.<br>이곳에서는 단어를 교환하는 것이 아니라 배치합니다.</p>
+                    <p>말할 적절한 순간을 찾지 못한 생각, 기억, 감정을 위해 존재합니다.<br></p>
+                    <p>모든 게시물은 익명이며 공개됩니다.<br>각 게시물은 고유 코드로만 표시되는 특정 장소에 고정됩니다.</p>
+                    <p>프로필, 댓글, 답글 기능이 없습니다.<br>이곳은 토론, 설득, 홍보를 위한 공간이 아닙니다.</p>
+                    <p>특정인을 대상으로 한 악의적인 내용, 노골적인 광고, 또는 공간의 고의적인 오용을 포함하는 게시물은 검토 후 삭제될 수 있습니다.</p>
+                    <p>관리는 침묵을 보호하기 위한 것이며,<br>어떤 감정을 느껴야 하는지를 강요하기 위한 것이 아닙니다.</p>
+                    <p class="about-highlight">여기에 아무것도 남기지 않아도 됩니다.<br>그냥 보기만 해도 됩니다.</p>
+                `
             };
 
             const userLang = navigator.language || navigator.userLanguage;
