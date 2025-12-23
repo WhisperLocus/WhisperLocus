@@ -20,11 +20,11 @@ const baseRadius = 4;
 const HEARTBEAT_HOUSE_COORDS = [134.1031, 34.4878]; 
 
 const EMOTION_COLORS = {
-    'LOVE': { name: '愛', color: '#b43a22' },
-    'GRATEFUL': { name: '感謝', color: '#e6ae25' },
-    'WISH': { name: '希望', color: '#dcceb3' },
-    'REGRET': { name: '懊悔', color: '#838931' },
-    'SAD': { name: '哀傷', color: '#41548f' }
+    'LOVE':     { name: '愛',   color: '#8e354a' }, // 蘇芳色 (深紅)
+    'GRATEFUL': { name: '感謝', color: '#c7a252' }, // 舊金色
+    'WISH':     { name: '希望', color: '#557c7c' }, // 藍綠青
+    'REGRET':   { name: '懊悔', color: '#5b644d' }, // 橄欖綠灰
+    'SAD':      { name: '哀傷', color: '#3e4e6c' }  // 影青色 (深藍)
 };
 
 const i18n = {
@@ -34,7 +34,7 @@ const i18n = {
         adminModeOn: '✅ 管理員模式已開啟', adminModeOff: '❌ 管理員模式已關閉',
         adminPasswordError: '❌ 密碼錯誤', deleteConfirm: '請輸入密碼：',
         deleteSuccess: (code) => `貼文 ${code} 已刪除`, postFound: (code) => `✅ 找到貼文 ${code}！`,
-        originalLink: '還原原文'
+        originalLink: 'ORIGINAL'
     },
     'en': {
         postButton: 'Leave a whisper.', searchInput: 'Search by Code.',
