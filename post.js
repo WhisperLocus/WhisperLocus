@@ -86,7 +86,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const initializeMap = (center) => {
         if (isMapInitialized) {
-            // ✨ 如果地圖已存在，開啟時切換到彩色街道模式
             map.setStyle('mapbox://styles/mapbox/streets-v12');
             map.jumpTo({ center: center });
             marker.setLngLat(center);
@@ -96,7 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
         mapboxgl.accessToken = MAPBOX_TOKEN;
         map = new mapboxgl.Map({
             container: 'location-map',
-            // ✨ 初始建立時直接使用街道模式
             style: 'mapbox://styles/mapbox/streets-v12',
             center: center,
             zoom: 14
@@ -119,7 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
         isMapInitialized = true;
     };
 
-    // ✨ 新增：恢復灰階地圖的通用函式
     const resetMapStyle = () => {
         if (map) {
             map.setStyle('mapbox://styles/mapbox/light-v11');
@@ -130,14 +127,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // 🎯 事件監聽
     // ----------------------------------------------------------------
 
-    // 1. 字數計數器
     contentInput.addEventListener('input', () => {
         const len = contentInput.value.length;
         charCountSpan.textContent = `${len} / ${MAX_CHAR_LIMIT}`;
         charCountSpan.style.color = len > MAX_CHAR_LIMIT ? 'red' : '#999';
     });
 
-    // 2. 第一步：點擊「選擇封存地點」按鈕
     submitButton.addEventListener('click', () => {
         const content = contentInput.value.trim();
         const emotionRadio = postForm.querySelector('input[name="emotion"]:checked');
@@ -148,13 +143,11 @@ document.addEventListener('DOMContentLoaded', () => {
         tempContent = content;
         tempEmotion = emotionRadio.value;
 
-        // 顯示彈窗
         locationModal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         
         mapSelectionArea.style.display = 'block';
 
-        // 初始化地圖 (此時會切換/維持在 streets 彩色模式)
         const teshima = [134.1031, 34.4878];
         initializeMap(teshima);
 
@@ -163,7 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300);
     });
 
-    // 3. GPS 定位按鈕邏輯
     useGpsButton.addEventListener('click', () => {
         if (!navigator.geolocation) return alert('瀏覽器不支援 GPS 定位');
         
@@ -194,19 +186,16 @@ document.addEventListener('DOMContentLoaded', () => {
         );
     });
 
-    // 4. 確認提交按鈕
     confirmLocationButton.addEventListener('click', () => {
         if (selectedLongitude && selectedLatitude) {
             finalizePostSubmission();
         }
     });
 
-    // 點擊 Modal 背景關閉
     window.addEventListener('click', (e) => {
         if (e.target === locationModal) {
             locationModal.style.display = 'none';
             document.body.style.overflow = 'auto';
-            // ✨ 關閉彈窗時恢復灰階模式
             resetMapStyle();
         }
     });
@@ -237,9 +226,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await window.addDoc(window.collection(window.db, "posts"), postData);
             
-            // ✨ 成功跳轉前恢復灰階（雖然會換頁，但這是好習慣）
             resetMapStyle();
-            location.href = `index.html?success=true&code=${resultCode}`;
+            
+            // ✨ 核心修正：將選定的經緯度帶回首頁 URL
+            const finalLng = Number(selectedLongitude);
+            const finalLat = Number(selectedLatitude);
+            location.href = `index.html?success=true&code=${resultCode}&lng=${finalLng}&lat=${finalLat}`;
 
         } catch (error) {
             console.error(error);
@@ -248,8 +240,6 @@ document.addEventListener('DOMContentLoaded', () => {
             submitButton.textContent = '選擇封存地點';
             confirmLocationButton.disabled = false;
             confirmLocationButton.textContent = '確認地點並發佈';
-            
-            // ✨ 失敗後如果關閉彈窗，也應確保地圖邏輯正確，這裡可以視需求決定是否 reset
         }
     };
 });

@@ -1,9 +1,9 @@
 /**
- * 🗺️ 悄悄話地圖 (Whisper Map) - 地球圖示翻譯版
- * 更新：
- * 1. 翻譯按鈕改為地球圖示 (SVG)。
- * 2. 點擊後變更為「還原」字樣。
- * 3. 語系自動偵測，繁體中文強制鎖定 zh-TW。
+ * 🗺️ 悄悄話地圖 (Whisper Map) - 完整整合版
+ * 更新重點：
+ * 1. 支援發文後自動飛往標註座標 (URL Params: lng, lat)
+ * 2. 優化手機觸控靈敏度 (clickTolerance & 透明觸控層)
+ * 3. 確保 Style 切換後圖層重新加載
  */
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiOWVvcmdlIiwiYSI6ImNtaXBoeGs5MzAxN3MzZ29pbGpsaTlwdTgifQ.ZUihSP9R0IYw7780nrJ0sA'; 
@@ -47,7 +47,6 @@ const i18n = {
     }
 };
 
-// SVG 地球圖示 HTML 模板
 const GLOBE_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
 
 // ==========================================
@@ -73,21 +72,12 @@ function startSmoothPulsing(startTime) {
                 10, (baseRadius * 2) * pulseScale, 14, (baseRadius * 10) * pulseScale, 18, (baseRadius * 20) * pulseScale
             ]);
         }
-        if (map.getLayer('clusters-pulse')) {
-            map.setPaintProperty('clusters-pulse', 'circle-opacity', opacity);
-            map.setPaintProperty('clusters-pulse', 'circle-radius', [
-                'interpolate', ['exponential', 1.5], ['zoom'],
-                10, ['interpolate', ['linear'], ['get', 'point_count'], 5, (baseRadius * 4) * pulseScale, 10, (baseRadius * 10) * pulseScale, 20, (baseRadius * 16) * pulseScale],
-                14, ['interpolate', ['linear'], ['get', 'point_count'], 2, (baseRadius * 4) * pulseScale, 6, (baseRadius * 10) * pulseScale, 10, (baseRadius * 16) * pulseScale],
-                18, ['interpolate', ['linear'], ['get', 'point_count'], 2, (baseRadius * 4) * pulseScale, 4, (baseRadius * 10) * pulseScale, 8, (baseRadius * 16) * pulseScale]
-            ]);
-        }
     } catch (e) {}
     requestAnimationFrame(() => startSmoothPulsing(startTime));
 }
 
 // ==========================================
-// 🚀 核心初始化
+// 🚀 初始化與地圖設定
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     applyLanguage();
@@ -95,151 +85,149 @@ document.addEventListener('DOMContentLoaded', () => {
         container: 'map-container',
         style: 'mapbox://styles/mapbox/light-v11',
         center: HEARTBEAT_HOUSE_COORDS, 
-        zoom: 12
+        zoom: 12,
+        clickTolerance: 20 // ✨ 增加手機點擊容錯範圍
     });
 
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const userCoords = [position.coords.longitude, position.coords.latitude];
-                map.flyTo({ center: userCoords, zoom: 14, speed: 0.8 });
-            },
-            (err) => console.warn("GPS 無法取用:", err.message),
-            { enableHighAccuracy: true, timeout: 5000 }
-        );
-    }
+    // ✨ 監聽 Style 載入，確保切換底圖後圖層還在
+    map.on('style.load', () => {
+        addMapLayers(); 
+    });
 
     map.on('load', async () => {
-        const clusterProps = {};
-        Object.keys(EMOTION_COLORS).forEach(e => {
-            clusterProps[`count_${e}`] = ['+', ['case', ['==', ['get', 'emotion'], e], 1, 0]];
-        });
-
-        map.addSource('emotion-posts', {
-            type: 'geojson',
-            data: { type: 'FeatureCollection', features: [] },
-            cluster: true,
-            clusterMaxZoom: 14,
-            clusterRadius: 40,
-            clusterProperties: clusterProps
-        });
-
-        const colorExpr = [
-            'case',
-            ['all', ['>=', ['get', 'count_LOVE'], ['get', 'count_GRATEFUL']], ['>=', ['get', 'count_LOVE'], ['get', 'count_WISH']], ['>=', ['get', 'count_LOVE'], ['get', 'count_REGRET']], ['>=', ['get', 'count_LOVE'], ['get', 'count_SAD']]], EMOTION_COLORS.LOVE.color,
-            ['all', ['>=', ['get', 'count_GRATEFUL'], ['get', 'count_WISH']], ['>=', ['get', 'count_GRATEFUL'], ['get', 'count_REGRET']], ['>=', ['get', 'count_GRATEFUL'], ['get', 'count_SAD']]], EMOTION_COLORS.GRATEFUL.color,
-            ['all', ['>=', ['get', 'count_WISH'], ['get', 'count_REGRET']], ['>=', ['get', 'count_WISH'], ['get', 'count_SAD']]], EMOTION_COLORS.WISH.color,
-            ['>=', ['get', 'count_REGRET'], ['get', 'count_SAD']], EMOTION_COLORS.REGRET.color,
-            EMOTION_COLORS.SAD.color
-        ];
-
-        map.addLayer({ id: 'clusters-pulse', type: 'circle', source: 'emotion-posts', filter: ['has', 'point_count'], paint: { 'circle-color': colorExpr, 'circle-opacity': 0.2, 'circle-radius': baseRadius * 4, 'circle-pitch-alignment': 'map' }});
-        map.addLayer({ id: 'clusters', type: 'circle', source: 'emotion-posts', filter: ['has', 'point_count'], paint: { 'circle-color': colorExpr, 'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, baseRadius * 0.6, 10, baseRadius * 0.8, 15, baseRadius * 1.0 ], 'circle-opacity': 1, 'circle-stroke-width': 0 }});
-        map.addLayer({ id: 'unclustered-pulse', type: 'circle', source: 'emotion-posts', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': ['get', 'color'], 'circle-opacity': 0.3, 'circle-radius': baseRadius * 4, 'circle-pitch-alignment': 'map' }}, 'clusters');
-        map.addLayer({ id: 'unclustered-point', type: 'circle', source: 'emotion-posts', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': ['get', 'color'], 'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, baseRadius * 0.6, 10, baseRadius * 0.8, 15, baseRadius * 1.0 ], 'circle-stroke-width': 0 }});
-
-        setupInteraction();
         await loadWhispersFromFirebase();
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const postCode = urlParams.get('code');
-        if (postCode) {
-            setTimeout(() => {
-                searchAndFlyToPost(postCode.toUpperCase());
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }, 1000);
-        }
+        handleUrlNavigation(); // ✨ 處理 URL 導航（發文後飛過去）
         startSmoothPulsing(Date.now());
     });
 });
 
 // ==========================================
-// 🌏 地球圖示翻譯功能邏輯
+// 🏗️ 圖層定義
 // ==========================================
+function addMapLayers() {
+    if (map.getSource('emotion-posts')) return; // 避免重複添加
+
+    const clusterProps = {};
+    Object.keys(EMOTION_COLORS).forEach(e => {
+        clusterProps[`count_${e}`] = ['+', ['case', ['==', ['get', 'emotion'], e], 1, 0]];
+    });
+
+    map.addSource('emotion-posts', {
+        type: 'geojson',
+        data: postsToGeoJSON(allPostsData),
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 40,
+        clusterProperties: clusterProps
+    });
+
+    const colorExpr = [
+        'case',
+        ['all', ['>=', ['get', 'count_LOVE'], ['get', 'count_GRATEFUL']], ['>=', ['get', 'count_LOVE'], ['get', 'count_WISH']], ['>=', ['get', 'count_LOVE'], ['get', 'count_REGRET']], ['>=', ['get', 'count_LOVE'], ['get', 'count_SAD']]], EMOTION_COLORS.LOVE.color,
+        ['all', ['>=', ['get', 'count_GRATEFUL'], ['get', 'count_WISH']], ['>=', ['get', 'count_GRATEFUL'], ['get', 'count_REGRET']], ['>=', ['get', 'count_GRATEFUL'], ['get', 'count_SAD']]], EMOTION_COLORS.GRATEFUL.color,
+        ['all', ['>=', ['get', 'count_WISH'], ['get', 'count_REGRET']], ['>=', ['get', 'count_WISH'], ['get', 'count_SAD']]], EMOTION_COLORS.WISH.color,
+        ['>=', ['get', 'count_REGRET'], ['get', 'count_SAD']], EMOTION_COLORS.REGRET.color,
+        EMOTION_COLORS.SAD.color
+    ];
+
+    map.addLayer({ id: 'clusters-pulse', type: 'circle', source: 'emotion-posts', filter: ['has', 'point_count'], paint: { 'circle-color': colorExpr, 'circle-opacity': 0.2, 'circle-radius': baseRadius * 4 }});
+    map.addLayer({ id: 'clusters', type: 'circle', source: 'emotion-posts', filter: ['has', 'point_count'], paint: { 'circle-color': colorExpr, 'circle-radius': baseRadius * 1.5, 'circle-opacity': 1 }});
+    map.addLayer({ id: 'unclustered-pulse', type: 'circle', source: 'emotion-posts', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': ['get', 'color'], 'circle-opacity': 0.3, 'circle-radius': baseRadius * 4 }}, 'clusters');
+    map.addLayer({ id: 'unclustered-point', type: 'circle', source: 'emotion-posts', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': ['get', 'color'], 'circle-radius': baseRadius * 1.2, 'circle-opacity': 1 }});
+    
+    // ✨ 關鍵優化：透明觸控層
+    map.addLayer({ 
+        id: 'unclustered-point-touch', 
+        type: 'circle', 
+        source: 'emotion-posts', 
+        filter: ['!', ['has', 'point_count']], 
+        paint: { 'circle-radius': 25, 'circle-opacity': 0 } 
+    });
+
+    setupInteraction();
+}
+
+// ==========================================
+// 🛰️ URL 導航邏輯 (發文後飛往座標)
+// ==========================================
+function handleUrlNavigation() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const postCode = urlParams.get('code');
+    const lng = urlParams.get('lng');
+    const lat = urlParams.get('lat');
+
+    if (lng && lat) {
+        // ✨ 情境 A: 發文完畢帶座標回來
+        setTimeout(() => {
+            map.flyTo({ center: [parseFloat(lng), parseFloat(lat)], zoom: 16, speed: 1.2 });
+            if (postCode) searchAndFlyToPost(postCode.toUpperCase());
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }, 800);
+    } else if (postCode) {
+        // 情境 B: 只有 code (外部連結)
+        setTimeout(() => searchAndFlyToPost(postCode.toUpperCase()), 1000);
+    } else {
+        // 情境 C: 一般進入，獲取使用者位置
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => map.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 14 }),
+                (err) => console.warn("GPS Off")
+            );
+        }
+    }
+}
+
+// ==========================================
+// 🛠️ 其他功能 (翻譯、互動、資料處理)
+// ==========================================
+
 window.translateText = async function(textId, btnElement) {
     const textElement = document.getElementById(textId);
     if (!textElement || textElement.getAttribute('data-translating') === 'true') return;
-
     textElement.setAttribute('data-translating', 'true');
     const originalText = textElement.innerText;
-    const originalBtnHTML = btnElement.innerHTML; // 保存地球圖示 HTML
-    
-    // 語系偵測
-    const rawLang = navigator.language || navigator.userLanguage || 'zh-TW';
-    let targetLang = rawLang;
-    const isTraditionalChinese = ['zh-TW', 'zh-HK', 'zh-MO', 'zh-CHT'].some(l => rawLang.includes(l));
-    if (isTraditionalChinese) {
-        targetLang = 'zh-TW';
-    } else {
-        targetLang = rawLang.split('-')[0];
-    }
-    
+    const originalBtnHTML = btnElement.innerHTML;
+    const rawLang = navigator.language || 'zh-TW';
+    let targetLang = rawLang.includes('zh') ? 'zh-TW' : rawLang.split('-')[0];
     btnElement.innerText = '...';
-
     try {
-        const apiUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&hl=${targetLang}&dt=t&ie=UTF-8&q=${encodeURIComponent(originalText)}`;
+        const apiUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(originalText)}`;
         const response = await fetch(apiUrl);
         const data = await response.json();
-        let translatedText = "";
-        if (data && data[0]) {
-            data[0].forEach(line => { if (line[0]) translatedText += line[0]; });
-        }
-
+        let translatedText = data[0].map(line => line[0]).join("");
         textElement.style.opacity = 0;
         setTimeout(() => {
             textElement.innerText = translatedText;
-            textElement.style.transition = 'opacity 0.5s';
             textElement.style.opacity = 1;
-            
-            // 變更為「還原原文」文字
             btnElement.innerText = i18n[currentLangKey].originalLink;
             btnElement.style.fontSize = "10px";
-            
             btnElement.onclick = (e) => {
                 e.stopPropagation();
                 textElement.innerText = originalText;
-                btnElement.innerHTML = originalBtnHTML; // 還原為地球圖示
-                btnElement.style.fontSize = ""; // 恢復原始大小
+                btnElement.innerHTML = originalBtnHTML;
+                btnElement.style.fontSize = "";
                 btnElement.onclick = () => window.translateText(textId, btnElement);
             };
         }, 200);
-    } catch (e) {
-        console.error("翻譯失敗:", e);
-        btnElement.innerHTML = originalBtnHTML;
-    } finally {
-        textElement.removeAttribute('data-translating');
-    }
+    } catch (e) { btnElement.innerHTML = originalBtnHTML; } 
+    finally { textElement.removeAttribute('data-translating'); }
 };
 
 function buildPopupContent(props) {
-    const lang = i18n[currentLangKey] || i18n['zh'];
     const enforcedColor = props.color || EMOTION_COLORS['REGRET'].color;
     const contentId = `content-${props.code}-${Date.now()}`;
-
-    let topControls = `
-        <div class="popup-top-right-controls" style="position: absolute; top: 10px; right: 15px; display: flex; align-items: center; gap: 10px; z-index: 10;">
-            <span class="translate-btn-icon" 
-                  onclick="window.translateText('${contentId}', this)" 
-                  title="Translate"
-                  style="cursor: pointer; color: #999; display: flex; align-items: center; transition: color 0.2s;">
-                ${GLOBE_ICON}
-            </span>
-            ${window.isAdminMode ? `<button class="popup-delete-btn" data-id="${props.id}" data-code="${props.code}" style="background:none; border:none; padding:0; color:#999; cursor:pointer; font-size:14px;">✕</button>` : ''}
-        </div>
-    `;
-
     let displayLocation = props.locationText || '';
     if (displayLocation.includes(',')) {
         const parts = displayLocation.split(',').map(p => p.trim());
-        if (parts.length >= 2) {
-            displayLocation = `${parts[parts.length - 2]}, ${parts[parts.length - 1]}`;
-        }
+        displayLocation = parts.length >= 2 ? `${parts[parts.length - 2]}, ${parts[parts.length - 1]}` : displayLocation;
     }
-
     return `
         <div class="mapboxgl-popup-content is-expanded">
             <div class="emotion-popup-content-wrapper" style="border-left: 5px solid ${enforcedColor}; position: relative;">
-                ${topControls}
+                <div class="popup-top-right-controls" style="position: absolute; top: 10px; right: 15px; display: flex; align-items: center; gap: 10px;">
+                    <span class="translate-btn-icon" onclick="window.translateText('${contentId}', this)" style="cursor: pointer; color: #999;">${GLOBE_ICON}</span>
+                    ${window.isAdminMode ? `<button class="popup-delete-btn" data-id="${props.id}" data-code="${props.code}" style="background:none; border:none; color:#999; cursor:pointer;">✕</button>` : ''}
+                </div>
                 <div class="popup-code-label popup-top-left">${props.code}</div>
                 <div class="memo-content-text" id="${contentId}">${props.content || ""}</div>
                 <div class="popup-location-label popup-bottom-left">${displayLocation}</div>
@@ -249,7 +237,6 @@ function buildPopupContent(props) {
     `;
 }
 
-// 其餘功能保持不變...
 async function loadWhispersFromFirebase() {
     try {
         const querySnapshot = await window.getDocs(window.collection(window.db, "posts"));
@@ -290,22 +277,15 @@ function setupInteraction() {
         activePopups.push(popup);
     };
 
-    map.on('click', 'unclustered-point', handlePointClick);
-    map.on('click', 'clusters', handlePointClick);
-
-    document.addEventListener('click', async (e) => {
-        if (e.target.classList.contains('popup-delete-btn')) {
-            const docId = e.target.getAttribute('data-id');
-            const postCode = e.target.getAttribute('data-code');
-            if (confirm(`確定要刪除貼文 ${postCode} 嗎？`)) {
-                try {
-                    await window.deleteDoc(window.doc(window.db, "posts", docId));
-                    alert("已刪除貼文");
-                    closeAllPopups();
-                    await loadWhispersFromFirebase();
-                } catch (err) { console.error(err); }
-            }
-        }
+    // 綁定點擊事件到透明觸控層
+    map.on('click', 'unclustered-point-touch', handlePointClick);
+    map.on('click', 'clusters', (e) => {
+        const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+        const clusterId = features[0].properties.cluster_id;
+        map.getSource('emotion-posts').getClusterExpansionZoom(clusterId, (err, zoom) => {
+            if (err) return;
+            map.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
+        });
     });
 
     document.getElementById('code-search-form').onsubmit = async (e) => {
@@ -324,7 +304,7 @@ function setupInteraction() {
         input.value = '';
     };
 
-    ['clusters', 'unclustered-point'].forEach(lyr => {
+    ['clusters', 'unclustered-point-touch'].forEach(lyr => {
         map.on('mouseenter', lyr, () => map.getCanvas().style.cursor = 'pointer');
         map.on('mouseleave', lyr, () => map.getCanvas().style.cursor = '');
     });
@@ -335,7 +315,8 @@ async function searchAndFlyToPost(code) {
         const q = window.query(window.collection(window.db, "posts"), window.where("code", "==", code.toUpperCase()));
         const snap = await window.getDocs(q);
         if (snap.empty) throw new Error(i18n[currentLangKey].searchErrorNotFound);
-        const post = snap.docs[0].data();
+        const docSnap = snap.docs[0];
+        const post = docSnap.data();
         const coords = [post.longitude, post.latitude];
         const emotion = (post.emotion || 'REGRET').toUpperCase();
         let formattedDate = '';
@@ -343,7 +324,7 @@ async function searchAndFlyToPost(code) {
             const date = post.createdAt.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
             formattedDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).format(date);
         }
-        const formattedProps = { ...post, id: snap.docs[0].id, emotion, color: (EMOTION_COLORS[emotion] || EMOTION_COLORS['REGRET']).color, createdAt: formattedDate };
+        const formattedProps = { ...post, id: docSnap.id, emotion, color: (EMOTION_COLORS[emotion] || EMOTION_COLORS['REGRET']).color, createdAt: formattedDate };
         map.flyTo({ center: coords, zoom: 15, speed: 1.2 });
         map.once('moveend', () => {
             closeAllPopups();
@@ -358,7 +339,7 @@ async function searchAndFlyToPost(code) {
 }
 
 function applyLanguage() {
-    const browserLang = (navigator.language || navigator.userLanguage).substring(0, 2);
+    const browserLang = (navigator.language || 'zh').substring(0, 2);
     currentLangKey = i18n[browserLang] ? browserLang : 'zh';
 }
 function closeAllPopups() { activePopups.forEach(p => p.remove()); activePopups = []; }
