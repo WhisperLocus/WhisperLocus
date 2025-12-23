@@ -47,12 +47,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (data.features && data.features.length > 0) {
                 const feature = data.features[0];
-                const context = feature.context; // 這裡包含層級資訊
+                const context = feature.context; 
                 
                 let county = "";
                 let country = "";
 
-                // 💡 邏輯：從 context 中尋找特定的層級 (place = 縣市, country = 國家)
                 if (context) {
                     context.forEach(item => {
                         if (item.id.includes('place')) county = item.text;
@@ -60,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
-                // 如果有抓到縣市與國家，就組合起來；否則抓取 place_name 的最後兩段
                 if (county && country) {
                     return `${county}, ${country}`;
                 } else {
@@ -88,6 +86,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const initializeMap = (center) => {
         if (isMapInitialized) {
+            // ✨ 如果地圖已存在，開啟時切換到彩色街道模式
+            map.setStyle('mapbox://styles/mapbox/streets-v12');
             map.jumpTo({ center: center });
             marker.setLngLat(center);
             return;
@@ -96,7 +96,8 @@ document.addEventListener('DOMContentLoaded', () => {
         mapboxgl.accessToken = MAPBOX_TOKEN;
         map = new mapboxgl.Map({
             container: 'location-map',
-            style: 'mapbox://styles/mapbox/light-v11',
+            // ✨ 初始建立時直接使用街道模式
+            style: 'mapbox://styles/mapbox/streets-v12',
             center: center,
             zoom: 14
         });
@@ -118,6 +119,13 @@ document.addEventListener('DOMContentLoaded', () => {
         isMapInitialized = true;
     };
 
+    // ✨ 新增：恢復灰階地圖的通用函式
+    const resetMapStyle = () => {
+        if (map) {
+            map.setStyle('mapbox://styles/mapbox/light-v11');
+        }
+    };
+
     // ----------------------------------------------------------------
     // 🎯 事件監聽
     // ----------------------------------------------------------------
@@ -129,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
         charCountSpan.style.color = len > MAX_CHAR_LIMIT ? 'red' : '#999';
     });
 
-    // 2. 第一步：點擊「選擇封存地點」按鈕（直跳地圖）
+    // 2. 第一步：點擊「選擇封存地點」按鈕
     submitButton.addEventListener('click', () => {
         const content = contentInput.value.trim();
         const emotionRadio = postForm.querySelector('input[name="emotion"]:checked');
@@ -144,14 +152,12 @@ document.addEventListener('DOMContentLoaded', () => {
         locationModal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         
-        // ✨ 直接開啟地圖區域
         mapSelectionArea.style.display = 'block';
 
-        // 初始化地圖 (預設豐島)
+        // 初始化地圖 (此時會切換/維持在 streets 彩色模式)
         const teshima = [134.1031, 34.4878];
         initializeMap(teshima);
 
-        // 🔥 關鍵修正：給予極短延遲確保 Modal 完全展開後重新計算地圖尺寸
         setTimeout(() => {
             if (map) map.resize();
         }, 300);
@@ -169,7 +175,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const lng = pos.coords.longitude;
                 const lat = pos.coords.latitude;
                 
-                // 地圖飛往該座標並移動標記
                 if (map) {
                     map.flyTo({ center: [lng, lat], zoom: 16 });
                     marker.setLngLat([lng, lat]);
@@ -201,6 +206,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === locationModal) {
             locationModal.style.display = 'none';
             document.body.style.overflow = 'auto';
+            // ✨ 關閉彈窗時恢復灰階模式
+            resetMapStyle();
         }
     });
 
@@ -229,6 +236,9 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             await window.addDoc(window.collection(window.db, "posts"), postData);
+            
+            // ✨ 成功跳轉前恢復灰階（雖然會換頁，但這是好習慣）
+            resetMapStyle();
             location.href = `index.html?success=true&code=${resultCode}`;
 
         } catch (error) {
@@ -238,6 +248,8 @@ document.addEventListener('DOMContentLoaded', () => {
             submitButton.textContent = '選擇封存地點';
             confirmLocationButton.disabled = false;
             confirmLocationButton.textContent = '確認地點並發佈';
+            
+            // ✨ 失敗後如果關閉彈窗，也應確保地圖邏輯正確，這裡可以視需求決定是否 reset
         }
     };
 });
