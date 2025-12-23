@@ -7,7 +7,6 @@
 
     <script src='https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js'></script>
     <link href='https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css' rel='stylesheet' />
-    
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&display=swap" rel="stylesheet">
     
 <style>
@@ -34,95 +33,151 @@ html, body {
 }
 
 /* ---------------------------------------------------- */
-/* 左上角控制面板 */
+/* 頂部導覽列配置 (置中 Logo + 兩側圖示) */
 /* ---------------------------------------------------- */
-#left-top-controls {
+#top-navigation {
     position: absolute;
-    z-index: 10; 
-    top: 20px; 
-    left: 20px; 
-    width: 240px; 
-    max-width: 90%;
-    pointer-events: none;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    pointer-events: none; /* 穿透點擊到地圖 */
 }
 
-#left-top-controls > * {
-    pointer-events: auto;
+#top-navigation > * {
+    pointer-events: auto; /* 恢復按鈕點擊 */
 }
 
-#logo-header {
-    margin-bottom: 20px;
-    text-shadow: 0 0 10px rgba(255,255,255,0.8);
+/* 左側：三條橫線 Logo (About) */
+.nav-icon-left {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+}
+
+.nav-icon-left span {
+    display: block;
+    width: 22px;
+    height: 1.2px;
+    background-color: #333;
+    transition: 0.3s;
+}
+
+/* 中間：Logo 與 副標 */
+#branding-center {
+    text-align: center;
 }
 
 #main-logo {
     font-family: 'Cormorant Garamond', serif;
-    font-size: 36px;
+    font-size: 32px;
     font-weight: 600; 
     color: #333;
     margin: 0;
     line-height: 1;
-    cursor: pointer;
-    display: inline-block;
-    transition: opacity 0.2s;
-}
-
-#main-logo:hover {
-    opacity: 0.7;
+    letter-spacing: 1px;
 }
 
 #sub-slogan {
     font-family: 'Arial', sans-serif;
-    font-size: 15px;
-    color: #666;
-    margin: 5px 0 0 0;
+    font-size: 11px;
+    color: #888;
+    margin: 8px 0 0 0;
+    letter-spacing: 0.5px;
+}
+
+/* 右側：六個小圓點 Logo (Actions) */
+.nav-icon-right {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: repeat(3, 4px);
+    gap: 4px;
+    padding: 10px;
+}
+
+.nav-icon-right span {
+    display: block;
+    width: 4px;
+    height: 4px;
+    background-color: #333;
+    border-radius: 50%;
+}
+
+/* ---------------------------------------------------- */
+/* 右側功能面板 (Leave & Search) */
+/* ---------------------------------------------------- */
+#actions-panel {
+    position: fixed;
+    top: 90px;
+    right: 40px;
+    width: 250px;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    z-index: 150;
+    transform: translateY(-10px);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+#actions-panel.show {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
 }
 
 #leave-post-link {
     display: block;
     width: 100%;
-    background-color: #ff5722; 
+    background-color: #333; 
     color: white; 
     text-decoration: none;
     padding: 12px; 
-    border-radius: 8px;
-    font-weight: normal; 
+    border-radius: 6px;
+    font-size: 13px;
     text-align: center;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-    margin-bottom: 12px;
-    transition: transform 0.2s, background-color 0.2s;
+    margin-bottom: 15px;
+    transition: background 0.2s;
 }
 
-#leave-post-link:hover {
-    background-color: #e64a19;
-    transform: translateY(-2px);
-}
+#leave-post-link:hover { background-color: #000; }
 
 #code-input {
     width: 100%; 
     padding: 12px; 
-    font-size: 14px;
-    border-radius: 8px; 
+    font-size: 13px;
+    border-radius: 6px; 
     border: 1px solid rgba(0,0,0,0.1); 
     background: white; 
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); 
     text-align: center;
     outline: none;
 }
 
 #code-search-message {
-    font-size: 12px; 
+    font-size: 11px; 
     color: #ff5722;
-    margin-top: 8px;
+    margin-top: 10px;
     text-align: center;
-    font-weight: bold;
-    min-height: 18px;
-    transition: opacity 0.8s ease;
-    opacity: 1;
+    min-height: 15px;
 }
 
 /* ---------------------------------------------------- */
-/* 🎯 About 說明面板樣式 (半透明背景 + 深色文字) */
+/* About 說明面板樣式 */
 /* ---------------------------------------------------- */
 #about-panel {
     position: fixed;
@@ -130,144 +185,63 @@ html, body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 2000;
-    transition: opacity 0.4s ease;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s ease;
 }
 
-#about-panel.hidden {
-    display: none;
-    opacity: 0;
+#about-panel.show {
+    opacity: 1;
+    visibility: visible;
 }
 
 .about-content {
     position: relative;
-    max-width: 700px;
-    width: 90%;
-    max-height: 85vh;          /* 限制最大高度為螢幕的 85% */
-    padding: 50px 40px;
-    color: #1a1a1a;
+    max-width: 600px;
+    width: 85%;
+    text-align: center;
+    color: #333;
     font-family: 'Arial', sans-serif;
     line-height: 1.8;
-    text-align: center;
- 
-    /* 📜 開啟捲軸功能 */
-    overflow-y: auto;          
-    background: rgba(255, 255, 255, 0.2); /* 淡淡的內框感 */
-    border-radius: 15px;
-}
-
-/* ✨ 自定義捲軸樣式 (讓它變細、不突兀) */
-.about-content::-webkit-scrollbar {
-    width: 4px;
-}
-
-.about-content::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.about-content::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 10px;
-}
-
-.about-content::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.3);
-}
-/* 讓段落間距更有層次 */
-.about-content p {
-    margin-bottom: 28px;
-    font-size: 16px;
-    letter-spacing: 0.3px;
-}
-/* 移動端微調：縮小內距以爭取空間 */
-@media (max-width: 480px) {
-    .about-content {
-        padding: 40px 20px;
-        width: 95%;
-    }
-}
-
-.about-highlight {
-    margin-top: 35px;
-    font-style: italic;
-    color: #000;
-    font-weight: bold;
 }
 
 #about-close {
     position: absolute;
-    top: 0;
+    top: -60px;
     right: 0;
     background: none;
     border: none;
-    font-size: 40px;
+    font-size: 32px;
     cursor: pointer;
-    color: #333;
-    padding: 20px;
-    line-height: 1;
+    color: #999;
 }
 
-/* ---------------------------------------------------- */
-/* Popup 便利貼樣式 */
-/* ---------------------------------------------------- */
-.custom-memo-popup .mapboxgl-popup-content {
-    background-color: #FFFEF9 !important;
-    border-radius: 2px !important;
-    box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.2) !important;
-    padding: 0 !important;
-    width: 300px !important;
-    min-height: 250px !important;
-    display: flex;
-    flex-direction: column;
-}
+.about-highlight { margin-top: 30px; font-style: italic; font-weight: bold; }
 
+/* 響應式微調 */
 @media (max-width: 480px) {
-    .custom-memo-popup .mapboxgl-popup-content { width: 80vw !important; }
+    #top-navigation { padding: 0 20px; height: 80px; }
+    #main-logo { font-size: 26px; }
+    #actions-panel { right: 20px; width: calc(100% - 40px); }
 }
 
-.emotion-popup-content-wrapper {
-    padding: 35px 20px 40px 25px;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    height: 100%;
-}
-
-.memo-content-text {
-    font-size: 15px;
-    line-height: 1.7;
-    color: #333;
-    white-space: pre-wrap;
-    word-break: break-word;
-    margin: 10px 0;
-    overflow-y: auto;
-    max-height: 180px;
-
-    /* ✨ 新增：置中核心邏輯 */
-    flex-grow: 1;          /* 讓內容區塊撐開 */
-    display: flex;         /* 使用 Flexbox */
-    flex-direction: column;  /* 改為直向排列 */
-    justify-content: center; /* 短文時垂直置中 */
-}
-
-/* ✨ 針對長貼文的關鍵：當內容溢出時，自動改回靠頂部對齊 */
-.memo-content-text::before,
-.memo-content-text::after {
-    content: "";
-    flex-grow: 1;
-}
-
-.popup-code-label { position: absolute; top: 10px; left: 15px; font-size: 11px; color: #999; font-family: Arial, sans-serif; }
-.popup-delete-btn { position: absolute; top: 10px; right: 15px; font-size: 11px; color: #999; font-family: Arial, sans-serif; }
-.popup-location-label { position: absolute; bottom: 10px; left: 15px; font-size: 11px; color: #777; font-family: Arial, sans-serif; }
-.popup-bottom-right { position: absolute; bottom: 10px; right: 15px; font-size: 11px; color: #999; font-family: Arial, sans-serif;}
+/* Popup 樣式 (保留你原本設定) */
+.custom-memo-popup .mapboxgl-popup-content { background-color: #FFFEF9 !important; border-radius: 2px !important; box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.2) !important; padding: 0 !important; width: 300px !important; min-height: 250px !important; display: flex; flex-direction: column; }
+.emotion-popup-content-wrapper { padding: 35px 20px 40px 25px; flex-grow: 1; display: flex; flex-direction: column; position: relative; }
+.memo-content-text { font-size: 15px; line-height: 1.7; color: #333; white-space: pre-wrap; word-break: break-word; margin: 10px 0; overflow-y: auto; max-height: 180px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+.memo-content-text::before, .memo-content-text::after { content: ""; flex-grow: 1; }
+.popup-code-label, .popup-delete-btn, .popup-location-label, .popup-bottom-right { font-size: 11px; color: #999; position: absolute; font-family: Arial, sans-serif; }
+.popup-code-label { top: 10px; left: 15px; }
+.popup-delete-btn { top: 10px; right: 15px; cursor: pointer; }
+.popup-location-label { bottom: 10px; left: 15px; color: #777; }
+.popup-bottom-right { bottom: 10px; right: 15px; }
 
 </style>
 </head>
@@ -275,23 +249,31 @@ html, body {
 <body>
     <div id="map-container"></div> 
     
-    <div id="left-top-controls">
-        <div id="logo-header">
-            <h1 id="main-logo" title="Click for About">WhisperLocus</h1>
+    <nav id="top-navigation">
+        <button class="nav-icon-left" id="btn-about-trigger" title="About Us">
+            <span></span><span></span><span></span>
+        </button>
+
+        <div id="branding-center">
+            <h1 id="main-logo">WhisperLocus</h1>
             <p id="sub-slogan">For the words we never got to say.</p>
         </div>
 
-        <a href="post.html" id="leave-post-link">
-            Leave a whisper.
-        </a>
-        
+        <button class="nav-icon-right" id="btn-actions-trigger" title="Menu">
+            <span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+        </button>
+    </nav>
+
+    <div id="actions-panel">
+        <a href="post.html" id="leave-post-link">Leave a whisper.</a>
         <form id="code-search-form">
             <input type="text" id="code-input" placeholder="Search by Code" maxlength="8" required autocomplete="off">
             <div id="code-search-message"></div>
         </form>
     </div>
 
-    <div id="about-panel" class="hidden">
+    <div id="about-panel">
         <div class="about-content">
             <button id="about-close" title="Close">&times;</button>
             <div id="about-text-container"></div>
@@ -300,16 +282,7 @@ html, body {
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-        import { 
-            getFirestore, 
-            collection, 
-            getDocs, 
-            doc, 
-            deleteDoc, 
-            query, 
-            where, 
-            serverTimestamp 
-        } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, deleteDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDFED1K3dpMYaUpj8DlJWI1SnqgfFWzy44",
@@ -323,150 +296,62 @@ html, body {
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-      
-        window.db = db;
-        window.collection = collection;
-        window.getDocs = getDocs;
-        window.doc = doc;
-        window.deleteDoc = deleteDoc;
-        window.query = query;
-        window.where = where;
-        window.serverTimestamp = serverTimestamp;
-
-        console.log("🔥 Firebase Ready");
+        window.db = db; window.collection = collection; window.getDocs = getDocs; window.doc = doc; window.deleteDoc = deleteDoc; window.query = query; window.where = where; window.serverTimestamp = serverTimestamp;
     </script>
 
     <script src="map.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- 1. 多國語言文字資料庫 ---
+            // --- 1. 多國語言內容 ---
             const translations = {
-                'zh': `
-                    <p>WhisperLocus 是一個公開的匿名地圖。
-                    <p>它為那些未曾找到合適時機說出口的<br>思緒、記憶與情感而存在。</p>
-                    <p>每一則貼文都是匿名的，<br>每一則貼文都是公開的。<br>它們錨定於特定的空間，<br>僅由唯一的代碼標記。</p>
-                    <p>這裡沒有個人檔案、沒有評論，也沒有回覆。
-                    <p>若貼文包含針對性的傷害、<br>露骨廣告或刻意濫用，<br>可能會被審核或移除。<br>審核的存在是為了守護這片寧靜。</p>
-                    <p class="about-highlight">你可以不在這裡留下任何東西，<br>僅僅只是瀏覽也是沒問題的。</p>
-                `,
-                'en': `
-                    <p>WhisperLocus is a public, anonymous map<br>where words are placed, not exchanged.</p>
-                    <p>It exists for thoughts, memories, and feelings<br>that never found the right moment to be spoken.</p>
-                    <p>Every post is anonymous. Every post is public.<br>Each one is anchored to a place, marked only by a unique code.</p>
-                    <p>There are no profiles, no comments, and no replies.<br>This is not a space for debate, persuasion, or promotion.</p>
-                    <p>Some posts may be moderated or removed if they contain targeted harm, explicit advertising, or deliberate misuse of the space.</p>
-                    <p>Moderation exists to protect the quiet,<br>not to shape what should be felt.</p>
-                    <p class="about-highlight">You don’t have to leave anything here.<br>You’re allowed to just look.</p>
-                `
-                ,
-                'fr': `
-                    <p>WhisperLocus est une carte publique et anonyme<br>où les mots sont déposés, non échangés.</p>
-                    <p>Elle existe pour les pensées, les souvenirs et les sentiments<br>qui n'ont jamais trouvé le moment propice pour être exprimés.</p>
-                    <p>Chaque publication est anonyme. Chaque publication est publique.<br>Chaque publication est ancrée à un lieu, marqué uniquement par un code unique.</p>
-                    <p>Il n'y a pas de profils, pas de commentaires, pas de réponses.<br>Ce n'est pas un espace de débat, de persuasion ou de promotion.</p>
-                    <p>Certaines publications peuvent être modérées ou supprimées si elles contiennent des propos malveillants, de la publicité explicite ou un usage abusif de l'espace.</p>
-                    <p>La modération est là pour préserver le silence,<br>et non pour influencer les sentiments.</p>
-                    <p class="about-highlight">Vous n'êtes pas obligé de publier quoi que ce soit.<br>Vous pouvez simplement regarder.</p>
-                `
-                ,
-                'jp': `
-                    <p>WhisperLocus は、言葉が交わされるのではなく、置かれる、公開された匿名の地図です。</p>
-                    <p>ここは、言葉にするべき瞬間がなかった考え、記憶、そして感情のために存在します。</p>
-                    <p>すべての投稿は匿名です。すべての投稿は公開されます。<br>それぞれの投稿は場所に紐付けられ、固有のコードによってのみマークされます。</p>
-                    <p>プロフィール、コメント、返信はありません。<br>ここは議論、説得、宣伝のための空間ではありません。</p>
-                    <p>特定の人物への危害、露骨な広告、または意図的な空間の悪用を含む投稿は、モデレートまたは削除される場合があります。</p>
-                    <p>モデレーションは静寂を守るために存在し、<br>人々の感情を形作るために存在するのではありません。</p>
-                    <p class="about-highlight">ここに何も残す必要はありません。<br>ただ見るだけで結構です。</p>
-                `
-                ,
-                'es': `
-                    <p>WhisperLocus es un mapa público y anónimo<br>donde se colocan las palabras, no se intercambian.</p>
-                    <p>Existe para pensamientos, recuerdos y sentimientos<br>que nunca encontraron el momento adecuado para expresarse.</p>
-                    <p>Todas las publicaciones son anónimas. Todas las publicaciones son públicas.<br>Cada una está anclada a un lugar, marcada únicamente por un código único.</p>
-                    <p>No hay perfiles, comentarios ni respuestas.<br>Este no es un espacio para debatir, persuadir ni promocionar.</p>
-                    <p>Algunas publicaciones pueden ser moderadas o eliminadas si contienen daño dirigido, publicidad explícita o mal uso deliberado del espacio.</p>
-                    <p>La moderación existe para proteger el silencio,<br>no para moldear lo que se debe sentir.</p>
-                    <p class="about-highlight">No tienes que dejar nada aquí.<br>Solo puedes mirar.</p>
-                `
-                ,
-                'ko': `
-                    <p>위스퍼로커스는 익명으로 운영되는 공개 지도입니다.<br>이곳에서는 단어를 교환하는 것이 아니라 배치합니다.</p>
-                    <p>말할 적절한 순간을 찾지 못한 생각, 기억, 감정을 위해 존재합니다.<br></p>
-                    <p>모든 게시물은 익명이며 공개됩니다.<br>각 게시물은 고유 코드로만 표시되는 특정 장소에 고정됩니다.</p>
-                    <p>프로필, 댓글, 답글 기능이 없습니다.<br>이곳은 토론, 설득, 홍보를 위한 공간이 아닙니다.</p>
-                    <p>특정인을 대상으로 한 악의적인 내용, 노골적인 광고, 또는 공간의 고의적인 오용을 포함하는 게시물은 검토 후 삭제될 수 있습니다.</p>
-                    <p>관리는 침묵을 보호하기 위한 것이며,<br>어떤 감정을 느껴야 하는지를 강요하기 위한 것이 아닙니다.</p>
-                    <p class="about-highlight">여기에 아무것도 남기지 않아도 됩니다.<br>그냥 보기만 해도 됩니다.</p>
-                `
+                'zh': `<p>WhisperLocus 是一個公開的匿名地圖。</p><p>它為那些未曾找到合適時機說出口的<br>思緒、記憶與情感而存在。</p><p>每一則貼文都是匿名的，公開的。<br>它們錨定於特定的空間。</p><p class="about-highlight">你可以不在這裡留下任何東西，<br>僅僅只是瀏覽也是沒問題的。</p>`,
+                'en': `<p>WhisperLocus is a public, anonymous map.</p><p>It exists for thoughts, memories, and feelings<br>that never found the right moment to be spoken.</p><p class="about-highlight">You don’t have to leave anything here.<br>You’re allowed to just look.</p>`
             };
 
-            // --- 2. 偵測語系並注入內容 ---
             const userLang = navigator.language || navigator.userLanguage;
-            const langKey = userLang.startsWith('zh') ? 'zh' : 'en';
-            const textContainer = document.getElementById('about-text-container');
-            if (textContainer) {
-                textContainer.innerHTML = translations[langKey];
-            }
+            document.getElementById('about-text-container').innerHTML = translations[userLang.startsWith('zh') ? 'zh' : 'en'];
 
-            // --- 3. 搜尋訊息控制邏輯 ---
+            // --- 2. 交互控制邏輯 ---
+            const btnAbout = document.getElementById('btn-about-trigger');
+            const aboutPanel = document.getElementById('about-panel');
+            const aboutClose = document.getElementById('about-close');
+            
+            const btnActions = document.getElementById('btn-actions-trigger');
+            const actionsPanel = document.getElementById('actions-panel');
+
+            // 顯示 About
+            btnAbout.addEventListener('click', () => {
+                aboutPanel.classList.add('show');
+                actionsPanel.classList.remove('show');
+            });
+
+            // 關閉 About
+            aboutClose.addEventListener('click', () => aboutPanel.classList.remove('show'));
+            aboutPanel.addEventListener('click', (e) => { if(e.target === aboutPanel) aboutPanel.classList.remove('show'); });
+
+            // 切換右側功能選單
+            btnActions.addEventListener('click', (e) => {
+                e.stopPropagation();
+                actionsPanel.classList.toggle('show');
+            });
+
+            // 點擊頁面其他地方關閉功能面板
+            document.addEventListener('click', (e) => {
+                if (!actionsPanel.contains(e.target) && e.target !== btnActions) {
+                    actionsPanel.classList.remove('show');
+                }
+            });
+
+            // --- 3. 搜尋訊息處理 ---
             const msgBox = document.getElementById('code-search-message');
-            let hideTimeout = null;
-
-            const startHideTimer = () => {
-                if (msgBox.textContent.trim() === "") return;
-                if (hideTimeout) clearTimeout(hideTimeout);
-
-                hideTimeout = setTimeout(() => {
-                    msgBox.style.opacity = "0";
-                    setTimeout(() => {
-                        msgBox.textContent = "";
-                        msgBox.style.opacity = "1";
-                    }, 800);
-                }, 4000);
-            };
-
             const urlParams = new URLSearchParams(window.location.search);
             const code = urlParams.get('code');
             if (code) {
                 msgBox.textContent = `找到貼文 "${code}"`;
-                startHideTimer();
+                setTimeout(() => { msgBox.textContent = ""; }, 4000);
             }
-
-            const observer = new MutationObserver(() => {
-                if (msgBox.textContent.trim() !== "") {
-                    msgBox.style.opacity = "1";
-                    startHideTimer();
-                }
-            });
-            observer.observe(msgBox, { childList: true, characterData: true, subtree: true });
-
-            // --- 4. About 說明面板控制邏輯 ---
-            const mainLogo = document.getElementById('main-logo');
-            const aboutPanel = document.getElementById('about-panel');
-            const aboutClose = document.getElementById('about-close');
-
-            if (mainLogo) {
-                mainLogo.addEventListener('click', () => {
-                    aboutPanel.classList.remove('hidden');
-                    aboutPanel.style.opacity = "1";
-                });
-            }
-
-            if (aboutClose) {
-                aboutClose.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    aboutPanel.classList.add('hidden');
-                });
-            }
-
-            aboutPanel.addEventListener('click', (e) => {
-                if (e.target === aboutPanel) {
-                    aboutPanel.classList.add('hidden');
-                }
-            });
         });
     </script>
-
 </body>
 </html>
