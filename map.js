@@ -1,9 +1,8 @@
 /**
- * 🗺️ 悄悄話地圖 (Whisper Map) - 完整整合版
- * 更新重點：
- * 1. 支援發文後自動飛往標註座標 (URL Params: lng, lat)
- * 2. 優化手機觸控靈敏度 (clickTolerance & 透明觸控層)
- * 3. 確保 Style 切換後圖層重新加載
+ * 🗺️ 悄悄話地圖 (Whisper Map) - 修正版
+ * 1. 恢復原始圓點縮放 (interpolate) 設定，不變大。
+ * 2. 僅新增隱形觸控層解決手機點選不靈敏問題。
+ * 3. 整合發文後飛往座標功能。
  */
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiOWVvcmdlIiwiYSI6ImNtaXBoeGs5MzAxN3MzZ29pbGpsaTlwdTgifQ.ZUihSP9R0IYw7780nrJ0sA'; 
@@ -72,6 +71,15 @@ function startSmoothPulsing(startTime) {
                 10, (baseRadius * 2) * pulseScale, 14, (baseRadius * 10) * pulseScale, 18, (baseRadius * 20) * pulseScale
             ]);
         }
+        if (map.getLayer('clusters-pulse')) {
+            map.setPaintProperty('clusters-pulse', 'circle-opacity', opacity);
+            map.setPaintProperty('clusters-pulse', 'circle-radius', [
+                'interpolate', ['exponential', 1.5], ['zoom'],
+                10, ['interpolate', ['linear'], ['get', 'point_count'], 5, (baseRadius * 4) * pulseScale, 10, (baseRadius * 10) * pulseScale, 20, (baseRadius * 16) * pulseScale],
+                14, ['interpolate', ['linear'], ['get', 'point_count'], 2, (baseRadius * 4) * pulseScale, 6, (baseRadius * 10) * pulseScale, 10, (baseRadius * 16) * pulseScale],
+                18, ['interpolate', ['linear'], ['get', 'point_count'], 2, (baseRadius * 4) * pulseScale, 4, (baseRadius * 10) * pulseScale, 8, (baseRadius * 16) * pulseScale]
+            ]);
+        }
     } catch (e) {}
     requestAnimationFrame(() => startSmoothPulsing(startTime));
 }
@@ -86,26 +94,25 @@ document.addEventListener('DOMContentLoaded', () => {
         style: 'mapbox://styles/mapbox/light-v11',
         center: HEARTBEAT_HOUSE_COORDS, 
         zoom: 12,
-        clickTolerance: 20 // ✨ 增加手機點擊容錯範圍
+        clickTolerance: 15 // 恢復原始點擊容差
     });
 
-    // ✨ 監聽 Style 載入，確保切換底圖後圖層還在
     map.on('style.load', () => {
         addMapLayers(); 
     });
 
     map.on('load', async () => {
         await loadWhispersFromFirebase();
-        handleUrlNavigation(); // ✨ 處理 URL 導航（發文後飛過去）
+        handleUrlNavigation(); 
         startSmoothPulsing(Date.now());
     });
 });
 
 // ==========================================
-// 🏗️ 圖層定義
+// 🏗️ 圖層定義 (恢復原始視覺半徑)
 // ==========================================
 function addMapLayers() {
-    if (map.getSource('emotion-posts')) return; // 避免重複添加
+    if (map.getSource('emotion-posts')) return;
 
     const clusterProps = {};
     Object.keys(EMOTION_COLORS).forEach(e => {
@@ -130,12 +137,13 @@ function addMapLayers() {
         EMOTION_COLORS.SAD.color
     ];
 
-    map.addLayer({ id: 'clusters-pulse', type: 'circle', source: 'emotion-posts', filter: ['has', 'point_count'], paint: { 'circle-color': colorExpr, 'circle-opacity': 0.2, 'circle-radius': baseRadius * 4 }});
-    map.addLayer({ id: 'clusters', type: 'circle', source: 'emotion-posts', filter: ['has', 'point_count'], paint: { 'circle-color': colorExpr, 'circle-radius': baseRadius * 1.5, 'circle-opacity': 1 }});
-    map.addLayer({ id: 'unclustered-pulse', type: 'circle', source: 'emotion-posts', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': ['get', 'color'], 'circle-opacity': 0.3, 'circle-radius': baseRadius * 4 }}, 'clusters');
-    map.addLayer({ id: 'unclustered-point', type: 'circle', source: 'emotion-posts', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': ['get', 'color'], 'circle-radius': baseRadius * 1.2, 'circle-opacity': 1 }});
+    // 恢復所有原始視覺半徑 (interpolate) 設定
+    map.addLayer({ id: 'clusters-pulse', type: 'circle', source: 'emotion-posts', filter: ['has', 'point_count'], paint: { 'circle-color': colorExpr, 'circle-opacity': 0.2, 'circle-radius': baseRadius * 4, 'circle-pitch-alignment': 'map' }});
+    map.addLayer({ id: 'clusters', type: 'circle', source: 'emotion-posts', filter: ['has', 'point_count'], paint: { 'circle-color': colorExpr, 'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, baseRadius * 0.6, 10, baseRadius * 0.8, 15, baseRadius * 1.0 ], 'circle-opacity': 1, 'circle-stroke-width': 0 }});
+    map.addLayer({ id: 'unclustered-pulse', type: 'circle', source: 'emotion-posts', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': ['get', 'color'], 'circle-opacity': 0.3, 'circle-radius': baseRadius * 4, 'circle-pitch-alignment': 'map' }}, 'clusters');
+    map.addLayer({ id: 'unclustered-point', type: 'circle', source: 'emotion-posts', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': ['get', 'color'], 'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, baseRadius * 0.6, 10, baseRadius * 0.8, 15, baseRadius * 1.0 ], 'circle-stroke-width': 0 }});
     
-    // ✨ 關鍵優化：透明觸控層
+    // ✨ 僅新增：隱形觸控層 (讓手指好點，但不影響視覺大小)
     map.addLayer({ 
         id: 'unclustered-point-touch', 
         type: 'circle', 
@@ -157,17 +165,14 @@ function handleUrlNavigation() {
     const lat = urlParams.get('lat');
 
     if (lng && lat) {
-        // ✨ 情境 A: 發文完畢帶座標回來
         setTimeout(() => {
             map.flyTo({ center: [parseFloat(lng), parseFloat(lat)], zoom: 16, speed: 1.2 });
             if (postCode) searchAndFlyToPost(postCode.toUpperCase());
             window.history.replaceState({}, document.title, window.location.pathname);
         }, 800);
     } else if (postCode) {
-        // 情境 B: 只有 code (外部連結)
         setTimeout(() => searchAndFlyToPost(postCode.toUpperCase()), 1000);
     } else {
-        // 情境 C: 一般進入，獲取使用者位置
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => map.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 14 }),
@@ -177,9 +182,7 @@ function handleUrlNavigation() {
     }
 }
 
-// ==========================================
-// 🛠️ 其他功能 (翻譯、互動、資料處理)
-// ==========================================
+// ... (其餘翻譯、Popup、Firebase 邏輯維持你原本的狀態，不予更動) ...
 
 window.translateText = async function(textId, btnElement) {
     const textElement = document.getElementById(textId);
@@ -277,8 +280,9 @@ function setupInteraction() {
         activePopups.push(popup);
     };
 
-    // 綁定點擊事件到透明觸控層
+    // 點擊事件優先綁定在隱形觸控層
     map.on('click', 'unclustered-point-touch', handlePointClick);
+    map.on('click', 'unclustered-point', handlePointClick);
     map.on('click', 'clusters', (e) => {
         const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
         const clusterId = features[0].properties.cluster_id;
@@ -304,7 +308,7 @@ function setupInteraction() {
         input.value = '';
     };
 
-    ['clusters', 'unclustered-point-touch'].forEach(lyr => {
+    ['clusters', 'unclustered-point'].forEach(lyr => {
         map.on('mouseenter', lyr, () => map.getCanvas().style.cursor = 'pointer');
         map.on('mouseleave', lyr, () => map.getCanvas().style.cursor = '');
     });
