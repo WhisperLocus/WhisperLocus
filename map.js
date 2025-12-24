@@ -1,8 +1,5 @@
 /**
- * 🗺️ 悄悄話地圖 (Whisper Map) - 修正版
- * 1. 恢復原始圓點縮放 (interpolate) 設定，不變大。
- * 2. 僅新增隱形觸控層解決手機點選不靈敏問題。
- * 3. 整合發文後飛往座標功能。
+ * 🗺️ 悄悄話地圖 (Whisper Map) - 同色優先叢集版
  */
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiOWVvcmdlIiwiYSI6ImNtaXBoeGs5MzAxN3MzZ29pbGpsaTlwdTgifQ.ZUihSP9R0IYw7780nrJ0sA'; 
@@ -49,7 +46,7 @@ const i18n = {
 const GLOBE_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
 
 // ==========================================
-// 🎨 核心：呼吸動畫邏輯
+// 🎨 核心：呼吸動畫邏輯 (適應多心情圖層)
 // ==========================================
 function startSmoothPulsing(startTime) {
     if (!map || !map.isStyleLoaded()) {
@@ -64,22 +61,27 @@ function startSmoothPulsing(startTime) {
     const pulseScale = 0.2 + (breathFactor * 1.2); 
 
     try {
-        if (map.getLayer('unclustered-pulse')) {
-            map.setPaintProperty('unclustered-pulse', 'circle-opacity', opacity);
-            map.setPaintProperty('unclustered-pulse', 'circle-radius', [
-                'interpolate', ['exponential', 1.5], ['zoom'],
-                10, (baseRadius * 2) * pulseScale, 14, (baseRadius * 10) * pulseScale, 18, (baseRadius * 20) * pulseScale
-            ]);
-        }
-        if (map.getLayer('clusters-pulse')) {
-            map.setPaintProperty('clusters-pulse', 'circle-opacity', opacity);
-            map.setPaintProperty('clusters-pulse', 'circle-radius', [
-                'interpolate', ['exponential', 1.5], ['zoom'],
-                10, ['interpolate', ['linear'], ['get', 'point_count'], 5, (baseRadius * 4) * pulseScale, 10, (baseRadius * 10) * pulseScale, 20, (baseRadius * 16) * pulseScale],
-                14, ['interpolate', ['linear'], ['get', 'point_count'], 2, (baseRadius * 4) * pulseScale, 6, (baseRadius * 10) * pulseScale, 10, (baseRadius * 16) * pulseScale],
-                18, ['interpolate', ['linear'], ['get', 'point_count'], 2, (baseRadius * 4) * pulseScale, 4, (baseRadius * 10) * pulseScale, 8, (baseRadius * 16) * pulseScale]
-            ]);
-        }
+        Object.keys(EMOTION_COLORS).forEach(e => {
+            const unclusteredPulse = `pulse-unclustered-${e}`;
+            const clusterPulse = `pulse-cluster-${e}`;
+
+            if (map.getLayer(unclusteredPulse)) {
+                map.setPaintProperty(unclusteredPulse, 'circle-opacity', opacity);
+                map.setPaintProperty(unclusteredPulse, 'circle-radius', [
+                    'interpolate', ['exponential', 1.5], ['zoom'],
+                    10, (baseRadius * 2) * pulseScale, 14, (baseRadius * 10) * pulseScale, 18, (baseRadius * 20) * pulseScale
+                ]);
+            }
+            if (map.getLayer(clusterPulse)) {
+                map.setPaintProperty(clusterPulse, 'circle-opacity', opacity);
+                map.setPaintProperty(clusterPulse, 'circle-radius', [
+                    'interpolate', ['exponential', 1.5], ['zoom'],
+                    10, ['interpolate', ['linear'], ['get', 'point_count'], 5, (baseRadius * 4) * pulseScale, 10, (baseRadius * 10) * pulseScale, 20, (baseRadius * 16) * pulseScale],
+                    14, ['interpolate', ['linear'], ['get', 'point_count'], 2, (baseRadius * 4) * pulseScale, 6, (baseRadius * 10) * pulseScale, 10, (baseRadius * 16) * pulseScale],
+                    18, ['interpolate', ['linear'], ['get', 'point_count'], 2, (baseRadius * 4) * pulseScale, 4, (baseRadius * 10) * pulseScale, 8, (baseRadius * 16) * pulseScale]
+                ]);
+            }
+        });
     } catch (e) {}
     requestAnimationFrame(() => startSmoothPulsing(startTime));
 }
@@ -94,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
         style: 'mapbox://styles/mapbox/light-v11',
         center: HEARTBEAT_HOUSE_COORDS, 
         zoom: 12,
-        clickTolerance: 15 // 恢復原始點擊容差
+        clickTolerance: 15 
     });
 
     map.on('style.load', () => {
@@ -109,54 +111,115 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 🏗️ 圖層定義 (恢復原始視覺半徑)
+// 🏗️ 圖層定義 (依心情拆分 Source 以達成同色叢集)
 // ==========================================
 function addMapLayers() {
-    if (map.getSource('emotion-posts')) return;
-
-    const clusterProps = {};
     Object.keys(EMOTION_COLORS).forEach(e => {
-        clusterProps[`count_${e}`] = ['+', ['case', ['==', ['get', 'emotion'], e], 1, 0]];
+        const sourceId = `source-${e}`;
+        const color = EMOTION_COLORS[e].color;
+
+        if (map.getSource(sourceId)) return;
+
+        // 為每一種心情建立獨立資料源
+        map.addSource(sourceId, {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] },
+            cluster: true,
+            clusterMaxZoom: 14,
+            clusterRadius: 40 
+        });
+
+        // 1. 叢集擴散層
+        map.addLayer({
+            id: `pulse-cluster-${e}`,
+            type: 'circle',
+            source: sourceId,
+            filter: ['has', 'point_count'],
+            paint: { 'circle-color': color, 'circle-opacity': 0.2, 'circle-radius': baseRadius * 4, 'circle-pitch-alignment': 'map' }
+        });
+
+        // 2. 叢集核心點
+        map.addLayer({
+            id: `cluster-${e}`,
+            type: 'circle',
+            source: sourceId,
+            filter: ['has', 'point_count'],
+            paint: { 
+                'circle-color': color, 
+                'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, baseRadius * 0.6, 10, baseRadius * 0.8, 15, baseRadius * 1.0 ], 
+                'circle-opacity': 1 
+            }
+        });
+
+        // 3. 單點擴散層
+        map.addLayer({
+            id: `pulse-unclustered-${e}`,
+            type: 'circle',
+            source: sourceId,
+            filter: ['!', ['has', 'point_count']],
+            paint: { 'circle-color': color, 'circle-opacity': 0.3, 'circle-radius': baseRadius * 4, 'circle-pitch-alignment': 'map' }
+        });
+
+        // 4. 單點核心
+        map.addLayer({
+            id: `point-${e}`,
+            type: 'circle',
+            source: sourceId,
+            filter: ['!', ['has', 'point_count']],
+            paint: { 
+                'circle-color': color, 
+                'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, baseRadius * 0.6, 10, baseRadius * 0.8, 15, baseRadius * 1.0 ] 
+            }
+        });
+
+        // 5. 隱形觸控層
+        map.addLayer({ 
+            id: `touch-${e}`, 
+            type: 'circle', 
+            source: sourceId, 
+            filter: ['!', ['has', 'point_count']], 
+            paint: { 'circle-radius': 25, 'circle-opacity': 0 } 
+        });
+
+        // 綁定互動
+        setupLayerInteraction(e);
     });
+}
 
-    map.addSource('emotion-posts', {
-        type: 'geojson',
-        data: postsToGeoJSON(allPostsData),
-        cluster: true,
-        clusterMaxZoom: 14,
-        clusterRadius: 40,
-        clusterProperties: clusterProps
+function setupLayerInteraction(emotionKey) {
+    const clickableLayers = [`cluster-${emotionKey}`, `point-${emotionKey}`, `touch-${emotionKey}`];
+
+    clickableLayers.forEach(layerId => {
+        map.on('click', layerId, (e) => {
+            const feature = e.features[0];
+            const coords = feature.geometry.coordinates.slice();
+            
+            if (feature.properties.cluster) {
+                // 叢集點擊：放大
+                const clusterId = feature.properties.cluster_id;
+                map.getSource(`source-${emotionKey}`).getClusterExpansionZoom(clusterId, (err, zoom) => {
+                    if (err) return;
+                    map.easeTo({ center: coords, zoom: zoom });
+                });
+            } else {
+                // 單點點擊：顯示彈窗
+                map.flyTo({ center: coords, zoom: 15 });
+                closeAllPopups();
+                const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, className: 'custom-memo-popup' })
+                    .setLngLat(coords)
+                    .setHTML(buildPopupContent(feature.properties))
+                    .addTo(map);
+                activePopups.push(popup);
+            }
+        });
+
+        map.on('mouseenter', layerId, () => map.getCanvas().style.cursor = 'pointer');
+        map.on('mouseleave', layerId, () => map.getCanvas().style.cursor = '');
     });
-
-    const colorExpr = [
-        'case',
-        ['all', ['>=', ['get', 'count_LOVE'], ['get', 'count_GRATEFUL']], ['>=', ['get', 'count_LOVE'], ['get', 'count_WISH']], ['>=', ['get', 'count_LOVE'], ['get', 'count_REGRET']], ['>=', ['get', 'count_LOVE'], ['get', 'count_SAD']]], EMOTION_COLORS.LOVE.color,
-        ['all', ['>=', ['get', 'count_GRATEFUL'], ['get', 'count_WISH']], ['>=', ['get', 'count_GRATEFUL'], ['get', 'count_REGRET']], ['>=', ['get', 'count_GRATEFUL'], ['get', 'count_SAD']]], EMOTION_COLORS.GRATEFUL.color,
-        ['all', ['>=', ['get', 'count_WISH'], ['get', 'count_REGRET']], ['>=', ['get', 'count_WISH'], ['get', 'count_SAD']]], EMOTION_COLORS.WISH.color,
-        ['>=', ['get', 'count_REGRET'], ['get', 'count_SAD']], EMOTION_COLORS.REGRET.color,
-        EMOTION_COLORS.SAD.color
-    ];
-
-    // 恢復所有原始視覺半徑 (interpolate) 設定
-    map.addLayer({ id: 'clusters-pulse', type: 'circle', source: 'emotion-posts', filter: ['has', 'point_count'], paint: { 'circle-color': colorExpr, 'circle-opacity': 0.2, 'circle-radius': baseRadius * 4, 'circle-pitch-alignment': 'map' }});
-    map.addLayer({ id: 'clusters', type: 'circle', source: 'emotion-posts', filter: ['has', 'point_count'], paint: { 'circle-color': colorExpr, 'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, baseRadius * 0.6, 10, baseRadius * 0.8, 15, baseRadius * 1.0 ], 'circle-opacity': 1, 'circle-stroke-width': 0 }});
-    map.addLayer({ id: 'unclustered-pulse', type: 'circle', source: 'emotion-posts', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': ['get', 'color'], 'circle-opacity': 0.3, 'circle-radius': baseRadius * 4, 'circle-pitch-alignment': 'map' }}, 'clusters');
-    map.addLayer({ id: 'unclustered-point', type: 'circle', source: 'emotion-posts', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': ['get', 'color'], 'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, baseRadius * 0.6, 10, baseRadius * 0.8, 15, baseRadius * 1.0 ], 'circle-stroke-width': 0 }});
-    
-    // ✨ 僅新增：隱形觸控層 (讓手指好點，但不影響視覺大小)
-    map.addLayer({ 
-        id: 'unclustered-point-touch', 
-        type: 'circle', 
-        source: 'emotion-posts', 
-        filter: ['!', ['has', 'point_count']], 
-        paint: { 'circle-radius': 25, 'circle-opacity': 0 } 
-    });
-
-    setupInteraction();
 }
 
 // ==========================================
-// 🛰️ URL 導航邏輯 (發文後飛往座標)
+// 🛰️ URL 導航邏輯
 // ==========================================
 function handleUrlNavigation() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -182,7 +245,9 @@ function handleUrlNavigation() {
     }
 }
 
-// ... (其餘翻譯、Popup、Firebase 邏輯維持你原本的狀態，不予更動) ...
+// ==========================================
+// 🛠️ 輔助函式與 Firebase 邏輯
+// ==========================================
 
 window.translateText = async function(textId, btnElement) {
     const textElement = document.getElementById(textId);
@@ -217,7 +282,8 @@ window.translateText = async function(textId, btnElement) {
 };
 
 function buildPopupContent(props) {
-    const enforcedColor = props.color || EMOTION_COLORS['REGRET'].color;
+    const emotionKey = (props.emotion || 'REGRET').toUpperCase();
+    const enforcedColor = EMOTION_COLORS[emotionKey].color;
     const contentId = `content-${props.code}-${Date.now()}`;
     let displayLocation = props.locationText || '';
     if (displayLocation.includes(',')) {
@@ -245,7 +311,15 @@ async function loadWhispersFromFirebase() {
         const querySnapshot = await window.getDocs(window.collection(window.db, "posts"));
         allPostsData = [];
         querySnapshot.forEach(doc => allPostsData.push({ id: doc.id, ...doc.data() }));
-        if (map.getSource('emotion-posts')) map.getSource('emotion-posts').setData(postsToGeoJSON(allPostsData));
+        
+        // 將資料分派給各個心情的 Source
+        Object.keys(EMOTION_COLORS).forEach(e => {
+            const filtered = allPostsData.filter(p => (p.emotion || 'REGRET').toUpperCase() === e);
+            const sourceId = `source-${e}`;
+            if (map.getSource(sourceId)) {
+                map.getSource(sourceId).setData(postsToGeoJSON(filtered));
+            }
+        });
     } catch (e) { console.error(e); }
 }
 
@@ -261,7 +335,7 @@ function postsToGeoJSON(posts) {
             const emotion = (post.emotion || 'REGRET').toUpperCase();
             return {
                 'type': 'Feature',
-                'properties': { ...post, 'color': (EMOTION_COLORS[emotion] || EMOTION_COLORS['REGRET']).color, 'emotion': emotion, 'createdAt': formattedDate },
+                'properties': { ...post, 'emotion': emotion, 'createdAt': formattedDate },
                 'geometry': { 'type': 'Point', 'coordinates': [post.longitude, post.latitude] }
             };
         })
@@ -269,29 +343,7 @@ function postsToGeoJSON(posts) {
 }
 
 function setupInteraction() {
-    const handlePointClick = (e) => {
-        const feature = e.features[0];
-        const props = feature.properties;
-        const coords = feature.geometry.coordinates.slice();
-        map.flyTo({ center: coords, zoom: 15 });
-        closeAllPopups();
-        const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, className: 'custom-memo-popup' })
-            .setLngLat(coords).setHTML(buildPopupContent(props)).addTo(map);
-        activePopups.push(popup);
-    };
-
-    // 點擊事件優先綁定在隱形觸控層
-    map.on('click', 'unclustered-point-touch', handlePointClick);
-    map.on('click', 'unclustered-point', handlePointClick);
-    map.on('click', 'clusters', (e) => {
-        const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
-        const clusterId = features[0].properties.cluster_id;
-        map.getSource('emotion-posts').getClusterExpansionZoom(clusterId, (err, zoom) => {
-            if (err) return;
-            map.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
-        });
-    });
-
+    // 搜尋表單邏輯
     document.getElementById('code-search-form').onsubmit = async (e) => {
         e.preventDefault();
         const input = document.getElementById('code-input');
@@ -308,9 +360,20 @@ function setupInteraction() {
         input.value = '';
     };
 
-    ['clusters', 'unclustered-point'].forEach(lyr => {
-        map.on('mouseenter', lyr, () => map.getCanvas().style.cursor = 'pointer');
-        map.on('mouseleave', lyr, () => map.getCanvas().style.cursor = '');
+    // 刪除按鈕 (事件代理)
+    document.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('popup-delete-btn')) {
+            const docId = e.target.getAttribute('data-id');
+            const postCode = e.target.getAttribute('data-code');
+            if (confirm(`確定刪除貼文 ${postCode}？`)) {
+                try {
+                    await window.deleteDoc(window.doc(window.db, "posts", docId));
+                    alert("已刪除");
+                    closeAllPopups();
+                    await loadWhispersFromFirebase();
+                } catch (err) { console.error(err); }
+            }
+        }
     });
 }
 
@@ -328,7 +391,7 @@ async function searchAndFlyToPost(code) {
             const date = post.createdAt.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
             formattedDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).format(date);
         }
-        const formattedProps = { ...post, id: docSnap.id, emotion, color: (EMOTION_COLORS[emotion] || EMOTION_COLORS['REGRET']).color, createdAt: formattedDate };
+        const formattedProps = { ...post, id: docSnap.id, emotion, createdAt: formattedDate };
         map.flyTo({ center: coords, zoom: 15, speed: 1.2 });
         map.once('moveend', () => {
             closeAllPopups();
