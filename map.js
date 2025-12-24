@@ -147,7 +147,7 @@ function addMapLayers() {
             paint: { 
                 'circle-color': color, 
                 'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, baseRadius * 0.6, 10, baseRadius * 0.8, 15, baseRadius * 1.0 ], 
-                'circle-opacity': 1 
+                'circle-opacity': 0.7 
             }
         });
 
@@ -168,7 +168,8 @@ function addMapLayers() {
             filter: ['!', ['has', 'point_count']],
             paint: { 
                 'circle-color': color, 
-                'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, baseRadius * 0.6, 10, baseRadius * 0.8, 15, baseRadius * 1.0 ] 
+                'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, baseRadius * 0.6, 10, baseRadius * 0.8, 15, baseRadius * 1.0 ], 
+                'circle-opacity': 0.7
             }
         });
 
