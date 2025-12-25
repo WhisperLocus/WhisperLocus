@@ -21,7 +21,8 @@ const EMOTION_COLORS = {
     'GRATEFUL': { name: '感謝', color: '#F2B134' }, // 鉻黃 (提高明度，地圖上極明顯)
     'WISH':     { name: '希望', color: '#267365' }, // 孔雀綠 (比橄欖綠亮，能與灰色區隔)
     'REGRET':   { name: '懊悔', color: '#1E3D59' }, // 深普魯士藍 (對比強烈)
-    'SAD':      { name: '哀傷', color: '#6A8CAF' }  // 鋼鐵藍 (比灰藍更深，層次分明)
+    'SAD':      { name: '哀傷', color: '#6A8CAF' }, // 鋼鐵藍 (比灰藍更深，層次分明)
+    'NONE':     { name: '空白', color: '#8C7B75' }  // 暖木棕
 };
 
 const i18n = {
@@ -320,7 +321,7 @@ async function loadWhispersFromFirebase() {
         
         // 將資料分派給各個心情的 Source
         Object.keys(EMOTION_COLORS).forEach(e => {
-            const filtered = allPostsData.filter(p => (p.emotion || 'REGRET').toUpperCase() === e);
+            const filtered = allPostsData.filter(p => (p.emotion || 'NONE').toUpperCase() === e);
             const sourceId = `source-${e}`;
             if (map.getSource(sourceId)) {
                 map.getSource(sourceId).setData(postsToGeoJSON(filtered));
@@ -338,7 +339,7 @@ function postsToGeoJSON(posts) {
                 const date = post.createdAt.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
                 formattedDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).format(date);
             }
-            const emotion = (post.emotion || 'REGRET').toUpperCase();
+            const emotion = (post.emotion || 'NONE').toUpperCase();
             return {
                 'type': 'Feature',
                 'properties': { ...post, 'emotion': emotion, 'createdAt': formattedDate },
@@ -391,7 +392,7 @@ async function searchAndFlyToPost(code) {
         const docSnap = snap.docs[0];
         const post = docSnap.data();
         const coords = [post.longitude, post.latitude];
-        const emotion = (post.emotion || 'REGRET').toUpperCase();
+        const emotion = (post.emotion || 'NONE').toUpperCase();
         let formattedDate = '';
         if (post.createdAt) {
             const date = post.createdAt.toDate ? post.createdAt.toDate() : new Date(post.createdAt);

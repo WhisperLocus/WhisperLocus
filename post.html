@@ -19,11 +19,12 @@
         --border-color: #dee2e6;
         --text-color: #333;
 
-        --emotion-love: #8e354a;
-        --emotion-grateful: #c7a252;
-        --emotion-wish: #557c7c;
-        --emotion-regret: #5b644d;
-        --emotion-sad: #3e4e6c;
+        --emotion-love: #B53435;
+        --emotion-grateful: #F2B134;
+        --emotion-wish: #267365;
+        --emotion-regret: #1E3D59;
+        --emotion-sad: #6A8CAF;
+        --emotion-none: #8C7B75;
     }
 
     *, ::before, ::after { box-sizing: border-box; }
@@ -132,6 +133,7 @@
     .color-wish { background-color: var(--emotion-wish); }
     .color-regret { background-color: var(--emotion-regret); }
     .color-sad { background-color: var(--emotion-sad); }
+    .color-none { background-color: var(--emotion-none); }
 
     input[type="radio"]:checked + .emotion-dot .dot-visual {
         transform: scale(1.2);
@@ -270,6 +272,12 @@
                         <div class="dot-visual color-sad"></div>
                         <span class="emotion-text">哀傷</span>
                     </label>
+     
+                    <input type="radio" id="radio-none" name="emotion" value="NONE">
+                    <label for="radio-none" class="emotion-dot">
+                        <div class="dot-visual color-none"></div>
+                        <span class="emotion-text">空白</span>
+                    </label> 
                 </div>
             </div>
 
