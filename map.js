@@ -17,11 +17,11 @@ const baseRadius = 4;
 const HEARTBEAT_HOUSE_COORDS = [134.1031, 34.4878]; 
 
 const EMOTION_COLORS = {
-    'LOVE':     { name: '愛',   color: '#8e354a' }, // 蘇芳色 (深紅)
-    'GRATEFUL': { name: '感謝', color: '#c7a252' }, // 舊金色
-    'WISH':     { name: '希望', color: '#557c7c' }, // 藍綠青
-    'REGRET':   { name: '懊悔', color: '#5b644d' }, // 橄欖綠灰
-    'SAD':      { name: '哀傷', color: '#3e4e6c' }  // 影青色 (深藍)
+    'LOVE':     { name: '愛',   color: '#B53435' }, // 濃郁茜紅
+    'GRATEFUL': { name: '感謝', color: '#F2B134' }, // 鉻黃 (提高明度，地圖上極明顯)
+    'WISH':     { name: '希望', color: '#267365' }, // 孔雀綠 (比橄欖綠亮，能與灰色區隔)
+    'REGRET':   { name: '懊悔', color: '#1E3D59' }, // 深普魯士藍 (對比強烈)
+    'SAD':      { name: '哀傷', color: '#6A8CAF' }  // 鋼鐵藍 (比灰藍更深，層次分明)
 };
 
 const i18n = {
@@ -58,7 +58,7 @@ function startSmoothPulsing(startTime) {
     const progress = (elapsed % duration) / duration;
     const breathFactor = Math.sin(progress * Math.PI); 
     const opacity = (1 - progress) * 0.4;
-    const pulseScale = 0.2 + (breathFactor * 1.2); 
+    const pulseScale = 0.4 + (breathFactor * 1.4); 
 
     try {
         Object.keys(EMOTION_COLORS).forEach(e => {
@@ -157,7 +157,12 @@ function addMapLayers() {
             type: 'circle',
             source: sourceId,
             filter: ['!', ['has', 'point_count']],
-            paint: { 'circle-color': color, 'circle-opacity': 0.3, 'circle-radius': baseRadius * 4, 'circle-pitch-alignment': 'map' }
+            paint: { 
+                'circle-color': color, 
+                'circle-opacity': 0.3, 
+                'circle-radius': baseRadius * 4, 
+                'circle-pitch-alignment': 'map', 
+            }
         });
 
         // 4. 單點核心
