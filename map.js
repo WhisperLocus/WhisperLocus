@@ -106,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     map.on('load', async () => {
         await loadWhispersFromFirebase();
+        setupInteraction(); // 確保互動邏輯在資料載入後執行
         handleUrlNavigation(); 
         startSmoothPulsing(Date.now());
     });
@@ -226,7 +227,7 @@ function setupLayerInteraction(emotionKey) {
 }
 
 // ==========================================
-// 🛰️ URL 導航邏輯
+// 🛰️ URL 導航與搜尋邏輯 (核心修復)
 // ==========================================
 function handleUrlNavigation() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -242,13 +243,51 @@ function handleUrlNavigation() {
         }, 800);
     } else if (postCode) {
         setTimeout(() => searchAndFlyToPost(postCode.toUpperCase()), 1000);
-    } else {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => map.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 14 }),
-                (err) => console.warn("GPS Off")
-            );
+    }
+}
+
+async function searchAndFlyToPost(code) {
+    try {
+        // 從 Firebase 獲取最新資料，確保搜尋不受限於地圖目前載入的點
+        const q = window.query(window.collection(window.db, "posts"), window.where("code", "==", code.toUpperCase()));
+        const snap = await window.getDocs(q);
+        
+        if (snap.empty) throw new Error(i18n[currentLangKey].searchErrorNotFound);
+        
+        const docSnap = snap.docs[0];
+        const post = docSnap.data();
+        const coords = [post.longitude, post.latitude];
+        const emotion = (post.emotion || 'NONE').toUpperCase();
+        
+        // 格式化日期
+        let formattedDate = '';
+        if (post.createdAt) {
+            const date = post.createdAt.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
+            formattedDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).format(date);
         }
+
+        const formattedProps = { ...post, id: docSnap.id, emotion, createdAt: formattedDate };
+
+        // 1. 先飛往座標
+        map.flyTo({ center: coords, zoom: 15, speed: 1.2 });
+
+        // 2. 飛行結束後開啟 Popup
+        map.once('moveend', () => {
+            closeAllPopups();
+            const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, className: 'custom-memo-popup' })
+                .setLngLat(coords)
+                .setHTML(buildPopupContent(formattedProps))
+                .addTo(map);
+            activePopups.push(popup);
+        });
+
+        // 清除可能的錯誤訊息
+        const msgEl = document.getElementById('code-search-message');
+        if (msgEl) msgEl.textContent = "";
+
+    } catch (e) { 
+        const msgEl = document.getElementById('code-search-message');
+        if (msgEl) msgEl.textContent = e.message; 
     }
 }
 
@@ -275,12 +314,10 @@ window.translateText = async function(textId, btnElement) {
             textElement.innerText = translatedText;
             textElement.style.opacity = 1;
             btnElement.innerText = i18n[currentLangKey].originalLink;
-            btnElement.style.fontSize = "10px";
             btnElement.onclick = (e) => {
                 e.stopPropagation();
                 textElement.innerText = originalText;
                 btnElement.innerHTML = originalBtnHTML;
-                btnElement.style.fontSize = "";
                 btnElement.onclick = () => window.translateText(textId, btnElement);
             };
         }, 200);
@@ -289,7 +326,7 @@ window.translateText = async function(textId, btnElement) {
 };
 
 function buildPopupContent(props) {
-    const emotionKey = (props.emotion || 'REGRET').toUpperCase();
+    const emotionKey = (props.emotion || 'NONE').toUpperCase();
     const enforcedColor = EMOTION_COLORS[emotionKey].color;
     const contentId = `content-${props.code}-${Date.now()}`;
     let displayLocation = props.locationText || '';
@@ -351,21 +388,24 @@ function postsToGeoJSON(posts) {
 
 function setupInteraction() {
     // 搜尋表單邏輯
-    document.getElementById('code-search-form').onsubmit = async (e) => {
-        e.preventDefault();
-        const input = document.getElementById('code-input');
-        const val = input.value.trim().toUpperCase();
-        if (val === ADMIN_KEY) {
-            const pw = prompt(i18n[currentLangKey].deleteConfirm);
-            if (pw === ADMIN_PASSWORD) {
-                window.isAdminMode = !window.isAdminMode;
-                document.getElementById('code-search-message').textContent = window.isAdminMode ? i18n[currentLangKey].adminModeOn : i18n[currentLangKey].adminModeOff;
+    const searchForm = document.getElementById('code-search-form');
+    if (searchForm) {
+        searchForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('code-input');
+            const val = input.value.trim().toUpperCase();
+            if (val === ADMIN_KEY) {
+                const pw = prompt(i18n[currentLangKey].deleteConfirm);
+                if (pw === ADMIN_PASSWORD) {
+                    window.isAdminMode = !window.isAdminMode;
+                    document.getElementById('code-search-message').textContent = window.isAdminMode ? i18n[currentLangKey].adminModeOn : i18n[currentLangKey].adminModeOff;
+                }
+                input.value = ''; return;
             }
-            input.value = ''; return;
-        }
-        await searchAndFlyToPost(val);
-        input.value = '';
-    };
+            await searchAndFlyToPost(val);
+            input.value = '';
+        };
+    }
 
     // 刪除按鈕 (事件代理)
     document.addEventListener('click', async (e) => {
@@ -382,34 +422,6 @@ function setupInteraction() {
             }
         }
     });
-}
-
-async function searchAndFlyToPost(code) {
-    try {
-        const q = window.query(window.collection(window.db, "posts"), window.where("code", "==", code.toUpperCase()));
-        const snap = await window.getDocs(q);
-        if (snap.empty) throw new Error(i18n[currentLangKey].searchErrorNotFound);
-        const docSnap = snap.docs[0];
-        const post = docSnap.data();
-        const coords = [post.longitude, post.latitude];
-        const emotion = (post.emotion || 'NONE').toUpperCase();
-        let formattedDate = '';
-        if (post.createdAt) {
-            const date = post.createdAt.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
-            formattedDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).format(date);
-        }
-        const formattedProps = { ...post, id: docSnap.id, emotion, createdAt: formattedDate };
-        map.flyTo({ center: coords, zoom: 15, speed: 1.2 });
-        map.once('moveend', () => {
-            closeAllPopups();
-            const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, className: 'custom-memo-popup' })
-                .setLngLat(coords).setHTML(buildPopupContent(formattedProps)).addTo(map);
-            activePopups.push(popup);
-        });
-    } catch (e) { 
-        const msgEl = document.getElementById('code-search-message');
-        if (msgEl) msgEl.textContent = e.message; 
-    }
 }
 
 function applyLanguage() {
