@@ -20,11 +20,11 @@
         --text-color: #333;
 
         --emotion-love: #B53435;
-        --emotion-grateful: #F2B134;
+        --emotion-confess: #F2B134;
         --emotion-wish: #267365;
         --emotion-regret: #1E3D59;
         --emotion-sad: #6A8CAF;
-        --emotion-none: #8C7B75;
+        --emotion-daily: #8C7B75;
     }
 
     *, ::before, ::after { box-sizing: border-box; }
@@ -129,11 +129,11 @@
     .emotion-text { font-size: 12px; color: #999; text-align: center; }
 
     .color-love { background-color: var(--emotion-love); }
-    .color-grateful { background-color: var(--emotion-grateful); }
+    .color-confess { background-color: var(--emotion-confess); }
     .color-wish { background-color: var(--emotion-wish); }
     .color-regret { background-color: var(--emotion-regret); }
     .color-sad { background-color: var(--emotion-sad); }
-    .color-none { background-color: var(--emotion-none); }
+    .color-daily { background-color: var(--emotion-daily); }
 
     input[type="radio"]:checked + .emotion-dot .dot-visual {
         transform: scale(1.2);
@@ -249,10 +249,10 @@
                         <span class="emotion-text">愛</span>
                     </label>
 
-                    <input type="radio" id="radio-grateful" name="emotion" value="GRATEFUL">
-                    <label for="radio-grateful" class="emotion-dot">
-                        <div class="dot-visual color-grateful"></div>
-                        <span class="emotion-text">感謝</span>
+                    <input type="radio" id="radio-confess" name="emotion" value="CONFESS">
+                    <label for="radio-confess" class="emotion-dot">
+                        <div class="dot-visual color-confess"></div>
+                        <span class="emotion-text">告白</span>
                     </label>
 
                     <input type="radio" id="radio-wish" name="emotion" value="WISH">
@@ -273,10 +273,10 @@
                         <span class="emotion-text">哀傷</span>
                     </label>
      
-                    <input type="radio" id="radio-none" name="emotion" value="NONE">
-                    <label for="radio-none" class="emotion-dot">
-                        <div class="dot-visual color-none"></div>
-                        <span class="emotion-text">空白</span>
+                    <input type="radio" id="radio-daily" name="emotion" value="DAILY">
+                    <label for="radio-daily" class="emotion-dot">
+                        <div class="dot-visual color-daily"></div>
+                        <span class="emotion-text">日常</span>
                     </label> 
                 </div>
             </div>

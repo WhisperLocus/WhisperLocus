@@ -18,11 +18,11 @@ const HEARTBEAT_HOUSE_COORDS = [134.1031, 34.4878];
 
 const EMOTION_COLORS = {
     'LOVE':     { name: '愛',   color: '#B53435' }, // 濃郁茜紅
-    'GRATEFUL': { name: '感謝', color: '#F2B134' }, // 鉻黃 (提高明度，地圖上極明顯)
+    'CONFESS': { name: '告白', color: '#F2B134' }, // 鉻黃 (提高明度，地圖上極明顯)
     'WISH':     { name: '希望', color: '#267365' }, // 孔雀綠 (比橄欖綠亮，能與灰色區隔)
     'REGRET':   { name: '懊悔', color: '#1E3D59' }, // 深普魯士藍 (對比強烈)
     'SAD':      { name: '哀傷', color: '#6A8CAF' }, // 鋼鐵藍 (比灰藍更深，層次分明)
-    'NONE':     { name: '空白', color: '#8C7B75' }  // 暖木棕
+    'DAILY':     { name: '日常', color: '#8C7B75' }  // 暖木棕
 };
 
 const i18n = {
@@ -257,7 +257,7 @@ async function searchAndFlyToPost(code) {
         const docSnap = snap.docs[0];
         const post = docSnap.data();
         const coords = [post.longitude, post.latitude];
-        const emotion = (post.emotion || 'NONE').toUpperCase();
+        const emotion = (post.emotion || 'DAILY').toUpperCase();
         
         // 格式化日期
         let formattedDate = '';
@@ -326,7 +326,7 @@ window.translateText = async function(textId, btnElement) {
 };
 
 function buildPopupContent(props) {
-    const emotionKey = (props.emotion || 'NONE').toUpperCase();
+    const emotionKey = (props.emotion || 'DAILY').toUpperCase();
     const enforcedColor = EMOTION_COLORS[emotionKey].color;
     const contentId = `content-${props.code}-${Date.now()}`;
     let displayLocation = props.locationText || '';
@@ -358,7 +358,7 @@ async function loadWhispersFromFirebase() {
         
         // 將資料分派給各個心情的 Source
         Object.keys(EMOTION_COLORS).forEach(e => {
-            const filtered = allPostsData.filter(p => (p.emotion || 'NONE').toUpperCase() === e);
+            const filtered = allPostsData.filter(p => (p.emotion || 'DAILY').toUpperCase() === e);
             const sourceId = `source-${e}`;
             if (map.getSource(sourceId)) {
                 map.getSource(sourceId).setData(postsToGeoJSON(filtered));
@@ -376,7 +376,7 @@ function postsToGeoJSON(posts) {
                 const date = post.createdAt.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
                 formattedDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).format(date);
             }
-            const emotion = (post.emotion || 'NONE').toUpperCase();
+            const emotion = (post.emotion || 'DAILY').toUpperCase();
             return {
                 'type': 'Feature',
                 'properties': { ...post, 'emotion': emotion, 'createdAt': formattedDate },
@@ -429,4 +429,5 @@ function applyLanguage() {
     currentLangKey = i18n[browserLang] ? browserLang : 'zh';
 }
 function closeAllPopups() { activePopups.forEach(p => p.remove()); activePopups = []; }
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllPopups(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllPopups(); 
+});
