@@ -1,5 +1,5 @@
 /**
- * 🗺️ 悄悄話地圖 (Whisper Map) - 同色優先叢集版
+ * 🗺️ 悄悄話地圖 (Whisper Map) - 權重優先整合叢集版
  */
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiOWVvcmdlIiwiYSI6ImNtaXBoeGs5MzAxN3MzZ29pbGpsaTlwdTgifQ.ZUihSP9R0IYw7780nrJ0sA'; 
@@ -17,13 +17,16 @@ const baseRadius = 4;
 const HEARTBEAT_HOUSE_COORDS = [134.1031, 34.4878]; 
 
 const EMOTION_COLORS = {
-    'LOVE':     { name: '愛',   color: '#B53435' }, // 濃郁茜紅
-    'CONFESS': { name: '告白', color: '#F2B134' }, // 鉻黃 (提高明度，地圖上極明顯)
-    'WISH':     { name: '希望', color: '#267365' }, // 孔雀綠 (比橄欖綠亮，能與灰色區隔)
-    'REGRET':   { name: '懊悔', color: '#1E3D59' }, // 深普魯士藍 (對比強烈)
-    'SAD':      { name: '哀傷', color: '#6A8CAF' }, // 鋼鐵藍 (比灰藍更深，層次分明)
-    'DAILY':     { name: '日常', color: '#8C7B75' }  // 暖木棕
+    'LOVE':    { name: '愛',   color: '#B53435' }, 
+    'CONFESS': { name: '告白', color: '#F2B134' }, 
+    'WISH':    { name: '希望', color: '#267365' }, 
+    'REGRET':  { name: '懊悔', color: '#1E3D59' }, 
+    'SAD':     { name: '哀傷', color: '#6A8CAF' }, 
+    'DAILY':   { name: '日常', color: '#8C7B75' }  
 };
+
+// 順位權重 (用於相同點數時的判斷)
+const EMOTION_PRIORITY = ['LOVE', 'CONFESS', 'WISH', 'REGRET', 'SAD', 'DAILY'];
 
 const i18n = {
     'zh': {
@@ -47,7 +50,7 @@ const i18n = {
 const GLOBE_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
 
 // ==========================================
-// 🎨 核心：呼吸動畫邏輯 (適應多心情圖層)
+// 🎨 核心：呼吸動畫邏輯
 // ==========================================
 function startSmoothPulsing(startTime) {
     if (!map || !map.isStyleLoaded()) {
@@ -62,27 +65,22 @@ function startSmoothPulsing(startTime) {
     const pulseScale = 0.4 + (breathFactor * 1.4); 
 
     try {
-        Object.keys(EMOTION_COLORS).forEach(e => {
-            const unclusteredPulse = `pulse-unclustered-${e}`;
-            const clusterPulse = `pulse-cluster-${e}`;
-
-            if (map.getLayer(unclusteredPulse)) {
-                map.setPaintProperty(unclusteredPulse, 'circle-opacity', opacity);
-                map.setPaintProperty(unclusteredPulse, 'circle-radius', [
-                    'interpolate', ['exponential', 1.5], ['zoom'],
-                    10, (baseRadius * 2) * pulseScale, 14, (baseRadius * 10) * pulseScale, 18, (baseRadius * 20) * pulseScale
-                ]);
-            }
-            if (map.getLayer(clusterPulse)) {
-                map.setPaintProperty(clusterPulse, 'circle-opacity', opacity);
-                map.setPaintProperty(clusterPulse, 'circle-radius', [
-                    'interpolate', ['exponential', 1.5], ['zoom'],
-                    10, ['interpolate', ['linear'], ['get', 'point_count'], 5, (baseRadius * 4) * pulseScale, 10, (baseRadius * 10) * pulseScale, 20, (baseRadius * 16) * pulseScale],
-                    14, ['interpolate', ['linear'], ['get', 'point_count'], 2, (baseRadius * 4) * pulseScale, 6, (baseRadius * 10) * pulseScale, 10, (baseRadius * 16) * pulseScale],
-                    18, ['interpolate', ['linear'], ['get', 'point_count'], 2, (baseRadius * 4) * pulseScale, 4, (baseRadius * 10) * pulseScale, 8, (baseRadius * 16) * pulseScale]
-                ]);
-            }
-        });
+        if (map.getLayer('pulse-unclustered')) {
+            map.setPaintProperty('pulse-unclustered', 'circle-opacity', opacity);
+            map.setPaintProperty('pulse-unclustered', 'circle-radius', [
+                'interpolate', ['exponential', 1.5], ['zoom'],
+                8, (baseRadius * 2) * pulseScale, 14, (baseRadius * 4) * pulseScale, 18, (baseRadius * 8) * pulseScale
+            ]);
+        }
+        if (map.getLayer('pulse-cluster')) {
+            map.setPaintProperty('pulse-cluster', 'circle-opacity', opacity);
+            map.setPaintProperty('pulse-cluster', 'circle-radius', [
+                'interpolate', ['exponential', 1.5], ['zoom'],
+                8, ['interpolate', ['linear'], ['get', 'point_count'], 5, (baseRadius * 3) * pulseScale, 10, (baseRadius * 6) * pulseScale, 20, (baseRadius * 10) * pulseScale],
+                14, ['interpolate', ['linear'], ['get', 'point_count'], 2, (baseRadius * 3) * pulseScale, 6, (baseRadius * 6) * pulseScale, 10, (baseRadius * 10) * pulseScale],
+                18, ['interpolate', ['linear'], ['get', 'point_count'], 2, (baseRadius * 3) * pulseScale, 4, (baseRadius * 6) * pulseScale, 8, (baseRadius * 10) * pulseScale]
+            ]);
+        }
     } catch (e) {}
     requestAnimationFrame(() => startSmoothPulsing(startTime));
 }
@@ -106,96 +104,140 @@ document.addEventListener('DOMContentLoaded', () => {
 
     map.on('load', async () => {
         await loadWhispersFromFirebase();
-        setupInteraction(); // 確保互動邏輯在資料載入後執行
+        setupInteraction(); 
         handleUrlNavigation(); 
         startSmoothPulsing(Date.now());
     });
 });
 
 // ==========================================
-// 🏗️ 圖層定義 (依心情拆分 Source 以達成同色叢集)
+// 🏗️ 圖層定義 (整合型叢集邏輯)
 // ==========================================
 function addMapLayers() {
-    Object.keys(EMOTION_COLORS).forEach(e => {
-        const sourceId = `source-${e}`;
-        const color = EMOTION_COLORS[e].color;
+    if (map.getSource('whispers')) return;
 
-        if (map.getSource(sourceId)) return;
-
-        // 為每一種心情建立獨立資料源
-        map.addSource(sourceId, {
-            type: 'geojson',
-            data: { type: 'FeatureCollection', features: [] },
-            cluster: true,
-            clusterMaxZoom: 14,
-            clusterRadius: 40 
-        });
-
-        // 1. 叢集擴散層
-        map.addLayer({
-            id: `pulse-cluster-${e}`,
-            type: 'circle',
-            source: sourceId,
-            filter: ['has', 'point_count'],
-            paint: { 'circle-color': color, 'circle-opacity': 0.2, 'circle-radius': baseRadius * 4, 'circle-pitch-alignment': 'map' }
-        });
-
-        // 2. 叢集核心點
-        map.addLayer({
-            id: `cluster-${e}`,
-            type: 'circle',
-            source: sourceId,
-            filter: ['has', 'point_count'],
-            paint: { 
-                'circle-color': color, 
-                'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, baseRadius * 0.6, 10, baseRadius * 0.8, 15, baseRadius * 1.0 ], 
-                'circle-opacity': 0.7 
-            }
-        });
-
-        // 3. 單點擴散層
-        map.addLayer({
-            id: `pulse-unclustered-${e}`,
-            type: 'circle',
-            source: sourceId,
-            filter: ['!', ['has', 'point_count']],
-            paint: { 
-                'circle-color': color, 
-                'circle-opacity': 0.3, 
-                'circle-radius': baseRadius * 4, 
-                'circle-pitch-alignment': 'map', 
-            }
-        });
-
-        // 4. 單點核心
-        map.addLayer({
-            id: `point-${e}`,
-            type: 'circle',
-            source: sourceId,
-            filter: ['!', ['has', 'point_count']],
-            paint: { 
-                'circle-color': color, 
-                'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, baseRadius * 0.6, 10, baseRadius * 0.8, 15, baseRadius * 1.0 ], 
-                'circle-opacity': 0.7
-            }
-        });
-
-        // 5. 隱形觸控層
-        map.addLayer({ 
-            id: `touch-${e}`, 
-            type: 'circle', 
-            source: sourceId, 
-            filter: ['!', ['has', 'point_count']], 
-            paint: { 'circle-radius': 25, 'circle-opacity': 0 } 
-        });
-
-        // 綁定互動
-        setupLayerInteraction(e);
+    // 建立單一資料源
+    map.addSource('whispers', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 50,
+        // 核心邏輯：計算叢集內各心情的數量
+        clusterProperties: {
+            'cnt_LOVE':    ['+', ['case', ['==', ['get', 'emotion'], 'LOVE'], 1, 0]],
+            'cnt_CONFESS': ['+', ['case', ['==', ['get', 'emotion'], 'CONFESS'], 1, 0]],
+            'cnt_WISH':    ['+', ['case', ['==', ['get', 'emotion'], 'WISH'], 1, 0]],
+            'cnt_REGRET':  ['+', ['case', ['==', ['get', 'emotion'], 'REGRET'], 1, 0]],
+            'cnt_SAD':     ['+', ['case', ['==', ['get', 'emotion'], 'SAD'], 1, 0]],
+            'cnt_DAILY':   ['+', ['case', ['==', ['get', 'emotion'], 'DAILY'], 1, 0]]
+        }
     });
+
+    // 🏆 勝出心情顏色判斷式 (處理點數合併與順位)
+    // 邏輯：檢查各心情數量，並遵守 LOVE > CONFESS > WISH > REGRET > SAD > DAILY 的順位
+    const clusterColorExpression = [
+        'case',
+        // 優先順位檢查：如果 LOVE 數量 >= 其他所有心情，則顯示 LOVE 色，依此類推
+        ['all', 
+            ['>=', ['get', 'cnt_LOVE'], ['get', 'cnt_CONFESS']],
+            ['>=', ['get', 'cnt_LOVE'], ['get', 'cnt_WISH']],
+            ['>=', ['get', 'cnt_LOVE'], ['get', 'cnt_REGRET']],
+            ['>=', ['get', 'cnt_LOVE'], ['get', 'cnt_SAD']],
+            ['>=', ['get', 'cnt_LOVE'], ['get', 'cnt_DAILY']]
+        ], EMOTION_COLORS['LOVE'].color,
+
+        ['all', 
+            ['>=', ['get', 'cnt_CONFESS'], ['get', 'cnt_WISH']],
+            ['>=', ['get', 'cnt_CONFESS'], ['get', 'cnt_REGRET']],
+            ['>=', ['get', 'cnt_CONFESS'], ['get', 'cnt_SAD']],
+            ['>=', ['get', 'cnt_CONFESS'], ['get', 'cnt_DAILY']]
+        ], EMOTION_COLORS['CONFESS'].color,
+
+        ['all', 
+            ['>=', ['get', 'cnt_WISH'], ['get', 'cnt_REGRET']],
+            ['>=', ['get', 'cnt_WISH'], ['get', 'cnt_SAD']],
+            ['>=', ['get', 'cnt_WISH'], ['get', 'cnt_DAILY']]
+        ], EMOTION_COLORS['WISH'].color,
+
+        ['all', 
+            ['>=', ['get', 'cnt_REGRET'], ['get', 'cnt_SAD']],
+            ['>=', ['get', 'cnt_REGRET'], ['get', 'cnt_DAILY']]
+        ], EMOTION_COLORS['REGRET'].color,
+
+        ['>=', ['get', 'cnt_SAD'], ['get', 'cnt_DAILY']], EMOTION_COLORS['SAD'].color,
+
+        EMOTION_COLORS['DAILY'].color // 預設
+    ];
+
+    // 單點顏色判斷式
+    const pointColorExpression = [
+        'match', ['get', 'emotion'],
+        'LOVE', EMOTION_COLORS['LOVE'].color,
+        'CONFESS', EMOTION_COLORS['CONFESS'].color,
+        'WISH', EMOTION_COLORS['WISH'].color,
+        'REGRET', EMOTION_COLORS['REGRET'].color,
+        'SAD', EMOTION_COLORS['SAD'].color,
+        EMOTION_COLORS['DAILY'].color
+    ];
+
+    // 1. 叢集擴散層
+    map.addLayer({
+        id: 'pulse-cluster',
+        type: 'circle',
+        source: 'whispers',
+        filter: ['has', 'point_count'],
+        paint: { 'circle-color': clusterColorExpression, 'circle-opacity': 0.2, 'circle-radius': baseRadius * 3 }
+    });
+
+    // 2. 叢集核心點
+    map.addLayer({
+        id: 'cluster-circles',
+        type: 'circle',
+        source: 'whispers',
+        filter: ['has', 'point_count'],
+        paint: { 
+            'circle-color': clusterColorExpression, 
+            'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, baseRadius * 0.8, 10, baseRadius * 1.2, 15, baseRadius * 1.2 ], 
+            'circle-opacity': 0.8 
+        }
+    });
+
+    // 3. 單點擴散層
+    map.addLayer({
+        id: 'pulse-unclustered',
+        type: 'circle',
+        source: 'whispers',
+        filter: ['!', ['has', 'point_count']],
+        paint: { 'circle-color': pointColorExpression, 'circle-opacity': 0.3, 'circle-radius': baseRadius * 4 }
+    });
+
+    // 4. 單點核心
+    map.addLayer({
+        id: 'points',
+        type: 'circle',
+        source: 'whispers',
+        filter: ['!', ['has', 'point_count']],
+        paint: { 
+            'circle-color': pointColorExpression, 
+            'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, baseRadius * 0.6, 10, baseRadius * 0.8, 15, baseRadius * 1.0 ], 
+            'circle-opacity': 0.8
+        }
+    });
+
+    // 5. 隱形觸控層
+    map.addLayer({ 
+        id: 'touch-layer', 
+        type: 'circle', 
+        source: 'whispers', 
+        paint: { 'circle-radius': 20, 'circle-opacity': 0 } 
+    });
+
+    setupLayerInteraction();
 }
 
-function setupLayerInteraction(emotionKey) {
-    const clickableLayers = [`cluster-${emotionKey}`, `point-${emotionKey}`, `touch-${emotionKey}`];
+function setupLayerInteraction() {
+    const clickableLayers = ['cluster-circles', 'points', 'touch-layer'];
 
     clickableLayers.forEach(layerId => {
         map.on('click', layerId, (e) => {
@@ -203,14 +245,12 @@ function setupLayerInteraction(emotionKey) {
             const coords = feature.geometry.coordinates.slice();
             
             if (feature.properties.cluster) {
-                // 叢集點擊：放大
                 const clusterId = feature.properties.cluster_id;
-                map.getSource(`source-${emotionKey}`).getClusterExpansionZoom(clusterId, (err, zoom) => {
+                map.getSource('whispers').getClusterExpansionZoom(clusterId, (err, zoom) => {
                     if (err) return;
                     map.easeTo({ center: coords, zoom: zoom });
                 });
             } else {
-                // 單點點擊：顯示彈窗
                 map.flyTo({ center: coords, zoom: 15 });
                 closeAllPopups();
                 const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, className: 'custom-memo-popup' })
@@ -227,7 +267,7 @@ function setupLayerInteraction(emotionKey) {
 }
 
 // ==========================================
-// 🛰️ URL 導航與搜尋邏輯 (核心修復)
+// 🛰️ URL 導航與搜尋邏輯
 // ==========================================
 function handleUrlNavigation() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -248,7 +288,6 @@ function handleUrlNavigation() {
 
 async function searchAndFlyToPost(code) {
     try {
-        // 從 Firebase 獲取最新資料，確保搜尋不受限於地圖目前載入的點
         const q = window.query(window.collection(window.db, "posts"), window.where("code", "==", code.toUpperCase()));
         const snap = await window.getDocs(q);
         
@@ -259,7 +298,6 @@ async function searchAndFlyToPost(code) {
         const coords = [post.longitude, post.latitude];
         const emotion = (post.emotion || 'DAILY').toUpperCase();
         
-        // 格式化日期
         let formattedDate = '';
         if (post.createdAt) {
             const date = post.createdAt.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
@@ -268,10 +306,8 @@ async function searchAndFlyToPost(code) {
 
         const formattedProps = { ...post, id: docSnap.id, emotion, createdAt: formattedDate };
 
-        // 1. 先飛往座標
         map.flyTo({ center: coords, zoom: 15, speed: 1.2 });
 
-        // 2. 飛行結束後開啟 Popup
         map.once('moveend', () => {
             closeAllPopups();
             const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, className: 'custom-memo-popup' })
@@ -281,7 +317,6 @@ async function searchAndFlyToPost(code) {
             activePopups.push(popup);
         });
 
-        // 清除可能的錯誤訊息
         const msgEl = document.getElementById('code-search-message');
         if (msgEl) msgEl.textContent = "";
 
@@ -356,14 +391,10 @@ async function loadWhispersFromFirebase() {
         allPostsData = [];
         querySnapshot.forEach(doc => allPostsData.push({ id: doc.id, ...doc.data() }));
         
-        // 將資料分派給各個心情的 Source
-        Object.keys(EMOTION_COLORS).forEach(e => {
-            const filtered = allPostsData.filter(p => (p.emotion || 'DAILY').toUpperCase() === e);
-            const sourceId = `source-${e}`;
-            if (map.getSource(sourceId)) {
-                map.getSource(sourceId).setData(postsToGeoJSON(filtered));
-            }
-        });
+        // 更新單一資料源
+        if (map.getSource('whispers')) {
+            map.getSource('whispers').setData(postsToGeoJSON(allPostsData));
+        }
     } catch (e) { console.error(e); }
 }
 
@@ -387,7 +418,6 @@ function postsToGeoJSON(posts) {
 }
 
 function setupInteraction() {
-    // 搜尋表單邏輯
     const searchForm = document.getElementById('code-search-form');
     if (searchForm) {
         searchForm.onsubmit = async (e) => {
@@ -407,7 +437,6 @@ function setupInteraction() {
         };
     }
 
-    // 刪除按鈕 (事件代理)
     document.addEventListener('click', async (e) => {
         if (e.target.classList.contains('popup-delete-btn')) {
             const docId = e.target.getAttribute('data-id');
