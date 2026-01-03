@@ -76,9 +76,9 @@ function startSmoothPulsing(startTime) {
             map.setPaintProperty('pulse-cluster', 'circle-opacity', opacity);
             map.setPaintProperty('pulse-cluster', 'circle-radius', [
                 'interpolate', ['exponential', 1.5], ['zoom'],
-                8, ['interpolate', ['linear'], ['get', 'point_count'], 5, (baseRadius * 3) * pulseScale, 10, (baseRadius * 6) * pulseScale, 20, (baseRadius * 10) * pulseScale],
-                14, ['interpolate', ['linear'], ['get', 'point_count'], 2, (baseRadius * 3) * pulseScale, 6, (baseRadius * 6) * pulseScale, 10, (baseRadius * 10) * pulseScale],
-                18, ['interpolate', ['linear'], ['get', 'point_count'], 2, (baseRadius * 3) * pulseScale, 4, (baseRadius * 6) * pulseScale, 8, (baseRadius * 10) * pulseScale]
+                8, ['interpolate', ['linear'], ['get', 'point_count'], 5, (baseRadius * 3) * pulseScale, 10, (baseRadius * 6) * pulseScale, 20, (baseRadius * 9) * pulseScale],
+                14, ['interpolate', ['linear'], ['get', 'point_count'], 2, (baseRadius * 3) * pulseScale, 6, (baseRadius * 6) * pulseScale, 10, (baseRadius * 9) * pulseScale],
+                18, ['interpolate', ['linear'], ['get', 'point_count'], 2, (baseRadius * 3) * pulseScale, 4, (baseRadius * 6) * pulseScale, 8, (baseRadius * 9) * pulseScale]
             ]);
         }
     } catch (e) {}
@@ -122,7 +122,7 @@ function addMapLayers() {
         data: { type: 'FeatureCollection', features: [] },
         cluster: true,
         clusterMaxZoom: 14,
-        clusterRadius: 50,
+        clusterRadius: 30,
         // 核心邏輯：計算叢集內各心情的數量
         clusterProperties: {
             'cnt_LOVE':    ['+', ['case', ['==', ['get', 'emotion'], 'LOVE'], 1, 0]],
@@ -187,7 +187,7 @@ function addMapLayers() {
         type: 'circle',
         source: 'whispers',
         filter: ['has', 'point_count'],
-        paint: { 'circle-color': clusterColorExpression, 'circle-opacity': 0.2, 'circle-radius': baseRadius * 3 }
+        paint: { 'circle-color': clusterColorExpression, 'circle-opacity': 0.2, 'circle-radius': baseRadius * 2 }
     });
 
     // 2. 叢集核心點
@@ -209,7 +209,7 @@ function addMapLayers() {
         type: 'circle',
         source: 'whispers',
         filter: ['!', ['has', 'point_count']],
-        paint: { 'circle-color': pointColorExpression, 'circle-opacity': 0.3, 'circle-radius': baseRadius * 4 }
+        paint: { 'circle-color': pointColorExpression, 'circle-opacity': 0.3, 'circle-radius': baseRadius * 2 }
     });
 
     // 4. 單點核心
