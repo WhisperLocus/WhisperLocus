@@ -121,8 +121,8 @@ function addMapLayers() {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] },
         cluster: true,
-        clusterMaxZoom: 14,
-        clusterRadius: 30,
+        clusterMaxZoom: 26,
+        clusterRadius: 18,
         // 核心邏輯：計算叢集內各心情的數量
         clusterProperties: {
             'cnt_LOVE':    ['+', ['case', ['==', ['get', 'emotion'], 'LOVE'], 1, 0]],
@@ -187,7 +187,7 @@ function addMapLayers() {
         type: 'circle',
         source: 'whispers',
         filter: ['has', 'point_count'],
-        paint: { 'circle-color': clusterColorExpression, 'circle-opacity': 0.2, 'circle-radius': baseRadius * 2 }
+        paint: { 'circle-color': clusterColorExpression, 'circle-opacity': 0.2, 'circle-radius': baseRadius * 1.5 }
     });
 
     // 2. 叢集核心點
@@ -209,7 +209,7 @@ function addMapLayers() {
         type: 'circle',
         source: 'whispers',
         filter: ['!', ['has', 'point_count']],
-        paint: { 'circle-color': pointColorExpression, 'circle-opacity': 0.3, 'circle-radius': baseRadius * 2 }
+        paint: { 'circle-color': pointColorExpression, 'circle-opacity': 0.3, 'circle-radius': baseRadius * 1.5 }
     });
 
     // 4. 單點核心
