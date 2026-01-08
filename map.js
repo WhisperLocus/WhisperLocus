@@ -277,7 +277,7 @@ function handleUrlNavigation() {
 
     if (lng && lat) {
         setTimeout(() => {
-            map.flyTo({ center: [parseFloat(lng), parseFloat(lat)], zoom: 16, speed: 1.2 });
+            map.flyTo({ center: [parseFloat(lng), parseFloat(lat)], zoom: 16, speed: 0.2 });
             if (postCode) searchAndFlyToPost(postCode.toUpperCase());
             window.history.replaceState({}, document.title, window.location.pathname);
         }, 800);
@@ -306,7 +306,7 @@ async function searchAndFlyToPost(code) {
 
         const formattedProps = { ...post, id: docSnap.id, emotion, createdAt: formattedDate };
 
-        map.flyTo({ center: coords, zoom: 15, speed: 1.2 });
+        map.flyTo({ center: coords, zoom: 15, speed: 0.2 });
 
         map.once('moveend', () => {
             closeAllPopups();
