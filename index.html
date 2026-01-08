@@ -33,7 +33,7 @@ html, body {
 }
 
 /* ---------------------------------------------------- */
-/* 頂部導覽列配置 (置中 Logo + 兩側圖示) */
+/* 頂部導覽列配置 */
 /* ---------------------------------------------------- */
 #top-navigation {
     position: absolute;
@@ -46,14 +46,11 @@ html, body {
     align-items: center;
     justify-content: space-between;
     padding: 0 40px;
-    pointer-events: none; /* 穿透點擊到地圖 */
+    pointer-events: none;
 }
 
-#top-navigation > * {
-    pointer-events: auto; /* 恢復按鈕點擊 */
-}
+#top-navigation > * { pointer-events: auto; }
 
-/* 左側：三條橫線 Logo (About) */
 .nav-icon-left {
     background: none;
     border: none;
@@ -72,10 +69,7 @@ html, body {
     transition: 0.3s;
 }
 
-/* 中間：Logo 與 副標 */
-#branding-center {
-    text-align: center;
-}
+#branding-center { text-align: center; }
 
 #main-logo {
     font-family: 'Cormorant Garamond', serif;
@@ -95,7 +89,6 @@ html, body {
     letter-spacing: 0.5px;
 }
 
-/* 右側：六個小圓點 Logo (Actions) */
 .nav-icon-right {
     background: none;
     border: none;
@@ -115,7 +108,7 @@ html, body {
 }
 
 /* ---------------------------------------------------- */
-/* 右側功能面板 (Leave & Search) */
+/* 右側功能面板 */
 /* ---------------------------------------------------- */
 #actions-panel {
     position: fixed;
@@ -153,10 +146,7 @@ html, body {
     font-size: 13px;
     text-align: center;
     margin-bottom: 15px;
-    transition: background 0.2s;
 }
-
-#leave-post-link:hover { background-color: #ff5722; }
 
 #code-input {
     width: 100%; 
@@ -178,63 +168,40 @@ html, body {
 }
 
 /* ---------------------------------------------------- */
-/* About 說明面板樣式 */
+/* 🎯 關鍵：修復彈窗在上方、箭頭在下方置中 */
 /* ---------------------------------------------------- */
-#about-panel {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(1px);
-    -webkit-backdrop-filter: blur(1px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.5s ease;
+
+/* 當彈窗錨點在底部時（即彈窗出現在點的上方） */
+.mapboxgl-popup-anchor-bottom {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important; /* 水平置中內容 */
 }
 
-#about-panel.show {
-    opacity: 1;
-    visibility: visible;
+/* 強制下方的箭頭 (Tip) 置中 */
+.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
+    align-self: center !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    order: 2; /* 確保箭頭在內容下方 */
 }
 
-.about-content {
-    position: relative;
-    max-width: 600px;
-    width: 85%;
-    text-align: center;
-    color: #333;
-    font-family: 'Arial', sans-serif;
-    line-height: 1.8;
+.mapboxgl-popup-anchor-bottom .mapboxgl-popup-content {
+    order: 1; /* 確保內容在箭頭上方 */
 }
 
-#about-close {
-    position: absolute;
-    top: -60px;
-    right: 0;
-    background: none;
-    border: none;
-    font-size: 32px;
-    cursor: pointer;
-    color: #999;
+/* Popup 樣式自定義 */
+.custom-memo-popup .mapboxgl-popup-content { 
+    background-color: #FFFEF9 !important; 
+    border-radius: 2px !important; 
+    box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.2) !important; 
+    padding: 0 !important; 
+    width: 300px !important; 
+    min-height: 250px !important; 
+    display: flex; 
+    flex-direction: column; 
 }
 
-.about-highlight { margin-top: 30px; font-style: italic; font-weight: bold; }
-
-/* 響應式微調 */
-@media (max-width: 480px) {
-    #top-navigation { padding: 0 20px; height: 80px; }
-    #main-logo { font-size: 26px; }
-    #actions-panel { right: 20px; width: calc(100% - 40px); }
-}
-
-/* Popup 樣式 (保留你原本設定) */
-.custom-memo-popup .mapboxgl-popup-content { background-color: #FFFEF9 !important; border-radius: 2px !important; box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.2) !important; padding: 0 !important; width: 300px !important; min-height: 250px !important; display: flex; flex-direction: column; }
 .emotion-popup-content-wrapper { padding: 35px 20px 40px 25px; flex-grow: 1; display: flex; flex-direction: column; position: relative; }
 .memo-content-text { font-size: 15px; line-height: 1.7; color: #333; white-space: pre-wrap; word-break: break-word; margin: 10px 0; overflow-y: auto; max-height: 180px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
 .memo-content-text::before, .memo-content-text::after { content: ""; flex-grow: 1; }
@@ -244,6 +211,28 @@ html, body {
 .popup-location-label { bottom: 10px; left: 15px; color: #777; }
 .popup-bottom-right { bottom: 10px; right: 15px; }
 
+/* ---------------------------------------------------- */
+/* About 面板 */
+/* ---------------------------------------------------- */
+#about-panel {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(1px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2000; opacity: 0; visibility: hidden;
+    transition: opacity 0.5s ease;
+}
+#about-panel.show { opacity: 1; visibility: visible; }
+.about-content { position: relative; max-width: 600px; width: 85%; text-align: center; color: #333; line-height: 1.8; }
+#about-close { position: absolute; top: -60px; right: 0; background: none; border: none; font-size: 32px; cursor: pointer; color: #999; }
+.about-highlight { margin-top: 30px; font-style: italic; font-weight: bold; }
+
+@media (max-width: 480px) {
+    #top-navigation { padding: 0 20px; height: 80px; }
+    #main-logo { font-size: 26px; }
+    #actions-panel { right: 20px; width: calc(100% - 40px); }
+}
 </style>
 </head>
 
@@ -251,16 +240,14 @@ html, body {
     <div id="map-container"></div> 
     
     <nav id="top-navigation">
-        <button class="nav-icon-left" id="btn-about-trigger" title="About Us">
+        <button class="nav-icon-left" id="btn-about-trigger">
             <span></span><span></span><span></span>
         </button>
-
         <div id="branding-center">
             <h1 id="main-logo">WhisperLocus</h1>
             <p id="sub-slogan">For the words we never got to say.</p>
         </div>
-
-        <button class="nav-icon-right" id="btn-actions-trigger" title="Menu">
+        <button class="nav-icon-right" id="btn-actions-trigger">
             <span></span><span></span><span></span>
             <span></span><span></span><span></span>
         </button>
@@ -276,7 +263,7 @@ html, body {
 
     <div id="about-panel">
         <div class="about-content">
-            <button id="about-close" title="Close">&times;</button>
+            <button id="about-close">&times;</button>
             <div id="about-text-container"></div>
         </div>
     </div>
@@ -304,7 +291,6 @@ html, body {
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- 1. 多國語言內容 ---
             const translations = {
                 'zh': `
                     <p>WhisperLocus 是一個公開的匿名地圖。
@@ -364,49 +350,19 @@ html, body {
                     <p class="about-highlight">여기에 아무것도 남길 필요가 없습니다.<br> 탐색만 하면 됩니다. </p>
                 `
             };
-
             const userLang = navigator.language || navigator.userLanguage;
             document.getElementById('about-text-container').innerHTML = translations[userLang.startsWith('zh') ? 'zh' : 'en'];
 
-            // --- 2. 交互控制邏輯 ---
             const btnAbout = document.getElementById('btn-about-trigger');
             const aboutPanel = document.getElementById('about-panel');
             const aboutClose = document.getElementById('about-close');
-            
             const btnActions = document.getElementById('btn-actions-trigger');
             const actionsPanel = document.getElementById('actions-panel');
 
-            // 顯示 About
-            btnAbout.addEventListener('click', () => {
-                aboutPanel.classList.add('show');
-                actionsPanel.classList.remove('show');
-            });
-
-            // 關閉 About
+            btnAbout.addEventListener('click', () => { aboutPanel.classList.add('show'); actionsPanel.classList.remove('show'); });
             aboutClose.addEventListener('click', () => aboutPanel.classList.remove('show'));
-            aboutPanel.addEventListener('click', (e) => { if(e.target === aboutPanel) aboutPanel.classList.remove('show'); });
-
-            // 切換右側功能選單
-            btnActions.addEventListener('click', (e) => {
-                e.stopPropagation();
-                actionsPanel.classList.toggle('show');
-            });
-
-            // 點擊頁面其他地方關閉功能面板
-            document.addEventListener('click', (e) => {
-                if (!actionsPanel.contains(e.target) && e.target !== btnActions) {
-                    actionsPanel.classList.remove('show');
-                }
-            });
-
-            // --- 3. 搜尋訊息處理 ---
-            const msgBox = document.getElementById('code-search-message');
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get('code');
-            if (code) {
-                msgBox.textContent = `找到貼文 "${code}"`;
-                setTimeout(() => { msgBox.textContent = ""; }, 4000);
-            }
+            btnActions.addEventListener('click', (e) => { e.stopPropagation(); actionsPanel.classList.toggle('show'); });
+            document.addEventListener('click', (e) => { if (!actionsPanel.contains(e.target) && e.target !== btnActions) actionsPanel.classList.remove('show'); });
         });
     </script>
 </body>

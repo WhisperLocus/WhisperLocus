@@ -25,7 +25,6 @@ const EMOTION_COLORS = {
     'DAILY':   { name: '日常', color: '#8C7B75' }  
 };
 
-// 順位權重 (用於相同點數時的判斷)
 const EMOTION_PRIORITY = ['LOVE', 'CONFESS', 'WISH', 'REGRET', 'SAD', 'DAILY'];
 
 const i18n = {
@@ -111,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 🏗️ 圖層定義 (整合型叢集邏輯)
+// 🏗️ 圖層定義
 // ==========================================
 function addMapLayers() {
     if (map.getSource('whispers')) return;
@@ -141,27 +140,22 @@ function addMapLayers() {
             ['>=', ['get', 'cnt_LOVE'], ['get', 'cnt_SAD']],
             ['>=', ['get', 'cnt_LOVE'], ['get', 'cnt_DAILY']]
         ], EMOTION_COLORS['LOVE'].color,
-
         ['all', 
             ['>=', ['get', 'cnt_CONFESS'], ['get', 'cnt_WISH']],
             ['>=', ['get', 'cnt_CONFESS'], ['get', 'cnt_REGRET']],
             ['>=', ['get', 'cnt_CONFESS'], ['get', 'cnt_SAD']],
             ['>=', ['get', 'cnt_CONFESS'], ['get', 'cnt_DAILY']]
         ], EMOTION_COLORS['CONFESS'].color,
-
         ['all', 
             ['>=', ['get', 'cnt_WISH'], ['get', 'cnt_REGRET']],
             ['>=', ['get', 'cnt_WISH'], ['get', 'cnt_SAD']],
             ['>=', ['get', 'cnt_WISH'], ['get', 'cnt_DAILY']]
         ], EMOTION_COLORS['WISH'].color,
-
         ['all', 
             ['>=', ['get', 'cnt_REGRET'], ['get', 'cnt_SAD']],
             ['>=', ['get', 'cnt_REGRET'], ['get', 'cnt_DAILY']]
         ], EMOTION_COLORS['REGRET'].color,
-
         ['>=', ['get', 'cnt_SAD'], ['get', 'cnt_DAILY']], EMOTION_COLORS['SAD'].color,
-
         EMOTION_COLORS['DAILY'].color 
     ];
 
@@ -240,17 +234,22 @@ function setupLayerInteraction() {
                     map.easeTo({ center: coords, zoom: zoom });
                 });
             } else {
-                // 🎯 整合位置偏移 offset：將 padding 替換為 offset
                 map.flyTo({ 
                     center: coords, 
                     zoom: 15, 
-                    speed: 0.4, 
+                    speed: 0.3, 
                     curve: 1.2, 
-                    offset: [0, 150] // 向螢幕下方移動 200px
+                    offset: [0, 150] 
                 });
                 
                 closeAllPopups();
-                const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, className: 'custom-memo-popup' })
+                // ✅ 確認已有 anchor: 'bottom'
+                const popup = new mapboxgl.Popup({ 
+                        offset: 25, 
+                        closeButton: false, 
+                        anchor: 'bottom', // 強制固定在上方，箭頭向下
+                        className: 'custom-memo-popup' 
+                    })
                     .setLngLat(coords)
                     .setHTML(buildPopupContent(feature.properties))
                     .addTo(map);
@@ -274,11 +273,10 @@ function handleUrlNavigation() {
 
     if (lng && lat) {
         setTimeout(() => {
-            // 🎯 整合位置偏移 offset：將 padding 替換為 offset
             map.flyTo({ 
                 center: [parseFloat(lng), parseFloat(lat)], 
                 zoom: 16, 
-                speed: 0.4, 
+                speed: 0.3, 
                 curve: 1.5, 
                 offset: [0, 150]
             });
@@ -310,18 +308,23 @@ async function searchAndFlyToPost(code) {
 
         const formattedProps = { ...post, id: docSnap.id, emotion, createdAt: formattedDate };
 
-        // 🎯 整合位置偏移 offset：將 padding 替換為 offset
         map.flyTo({ 
             center: coords, 
             zoom: 15, 
-            speed: 0.4, 
+            speed: 0.3, 
             curve: 1.2, 
-            offset: [0, 200] 
+            offset: [0, 150] 
         });
 
         map.once('moveend', () => {
             closeAllPopups();
-            const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, className: 'custom-memo-popup' })
+            // ✅ 確認已有 anchor: 'bottom'
+            const popup = new mapboxgl.Popup({ 
+                    offset: 25, 
+                    closeButton: false, 
+                    anchor: 'bottom', 
+                    className: 'custom-memo-popup' 
+                })
                 .setLngLat(coords)
                 .setHTML(buildPopupContent(formattedProps))
                 .addTo(map);
@@ -338,7 +341,7 @@ async function searchAndFlyToPost(code) {
 }
 
 // ==========================================
-// 🛠️ 輔助函式與 Firebase 邏輯
+// 🛠️ 輔助函式
 // ==========================================
 
 window.translateText = async function(textId, btnElement) {
