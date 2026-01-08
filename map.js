@@ -116,14 +116,12 @@ document.addEventListener('DOMContentLoaded', () => {
 function addMapLayers() {
     if (map.getSource('whispers')) return;
 
-    // 建立單一資料源
     map.addSource('whispers', {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] },
         cluster: true,
         clusterMaxZoom: 26,
         clusterRadius: 18,
-        // 核心邏輯：計算叢集內各心情的數量
         clusterProperties: {
             'cnt_LOVE':    ['+', ['case', ['==', ['get', 'emotion'], 'LOVE'], 1, 0]],
             'cnt_CONFESS': ['+', ['case', ['==', ['get', 'emotion'], 'CONFESS'], 1, 0]],
@@ -134,11 +132,8 @@ function addMapLayers() {
         }
     });
 
-    // 🏆 勝出心情顏色判斷式 (處理點數合併與順位)
-    // 邏輯：檢查各心情數量，並遵守 LOVE > CONFESS > WISH > REGRET > SAD > DAILY 的順位
     const clusterColorExpression = [
         'case',
-        // 優先順位檢查：如果 LOVE 數量 >= 其他所有心情，則顯示 LOVE 色，依此類推
         ['all', 
             ['>=', ['get', 'cnt_LOVE'], ['get', 'cnt_CONFESS']],
             ['>=', ['get', 'cnt_LOVE'], ['get', 'cnt_WISH']],
@@ -167,10 +162,9 @@ function addMapLayers() {
 
         ['>=', ['get', 'cnt_SAD'], ['get', 'cnt_DAILY']], EMOTION_COLORS['SAD'].color,
 
-        EMOTION_COLORS['DAILY'].color // 預設
+        EMOTION_COLORS['DAILY'].color 
     ];
 
-    // 單點顏色判斷式
     const pointColorExpression = [
         'match', ['get', 'emotion'],
         'LOVE', EMOTION_COLORS['LOVE'].color,
@@ -181,7 +175,6 @@ function addMapLayers() {
         EMOTION_COLORS['DAILY'].color
     ];
 
-    // 1. 叢集擴散層
     map.addLayer({
         id: 'pulse-cluster',
         type: 'circle',
@@ -190,7 +183,6 @@ function addMapLayers() {
         paint: { 'circle-color': clusterColorExpression, 'circle-opacity': 0.2, 'circle-radius': baseRadius * 1.5 }
     });
 
-    // 2. 叢集核心點
     map.addLayer({
         id: 'cluster-circles',
         type: 'circle',
@@ -203,7 +195,6 @@ function addMapLayers() {
         }
     });
 
-    // 3. 單點擴散層
     map.addLayer({
         id: 'pulse-unclustered',
         type: 'circle',
@@ -212,7 +203,6 @@ function addMapLayers() {
         paint: { 'circle-color': pointColorExpression, 'circle-opacity': 0.3, 'circle-radius': baseRadius * 1.5 }
     });
 
-    // 4. 單點核心
     map.addLayer({
         id: 'points',
         type: 'circle',
@@ -225,7 +215,6 @@ function addMapLayers() {
         }
     });
 
-    // 5. 隱形觸控層
     map.addLayer({ 
         id: 'touch-layer', 
         type: 'circle', 
@@ -251,7 +240,15 @@ function setupLayerInteraction() {
                     map.easeTo({ center: coords, zoom: zoom });
                 });
             } else {
-                map.flyTo({ center: coords, zoom: 15 });
+                // 🎯 整合位置偏移 offset：將 padding 替換為 offset
+                map.flyTo({ 
+                    center: coords, 
+                    zoom: 15, 
+                    speed: 0.4, 
+                    curve: 1.2, 
+                    offset: [0, 150] // 向螢幕下方移動 200px
+                });
+                
                 closeAllPopups();
                 const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, className: 'custom-memo-popup' })
                     .setLngLat(coords)
@@ -277,7 +274,14 @@ function handleUrlNavigation() {
 
     if (lng && lat) {
         setTimeout(() => {
-            map.flyTo({ center: [parseFloat(lng), parseFloat(lat)], zoom: 16, speed: 0.2 });
+            // 🎯 整合位置偏移 offset：將 padding 替換為 offset
+            map.flyTo({ 
+                center: [parseFloat(lng), parseFloat(lat)], 
+                zoom: 16, 
+                speed: 0.4, 
+                curve: 1.5, 
+                offset: [0, 150]
+            });
             if (postCode) searchAndFlyToPost(postCode.toUpperCase());
             window.history.replaceState({}, document.title, window.location.pathname);
         }, 800);
@@ -306,7 +310,14 @@ async function searchAndFlyToPost(code) {
 
         const formattedProps = { ...post, id: docSnap.id, emotion, createdAt: formattedDate };
 
-        map.flyTo({ center: coords, zoom: 15, speed: 0.2 });
+        // 🎯 整合位置偏移 offset：將 padding 替換為 offset
+        map.flyTo({ 
+            center: coords, 
+            zoom: 15, 
+            speed: 0.4, 
+            curve: 1.2, 
+            offset: [0, 200] 
+        });
 
         map.once('moveend', () => {
             closeAllPopups();
@@ -390,8 +401,6 @@ async function loadWhispersFromFirebase() {
         const querySnapshot = await window.getDocs(window.collection(window.db, "posts"));
         allPostsData = [];
         querySnapshot.forEach(doc => allPostsData.push({ id: doc.id, ...doc.data() }));
-        
-        // 更新單一資料源
         if (map.getSource('whispers')) {
             map.getSource('whispers').setData(postsToGeoJSON(allPostsData));
         }
