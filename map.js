@@ -237,7 +237,7 @@ function setupLayerInteraction() {
                 map.flyTo({ 
                     center: coords, 
                     zoom: 15, 
-                    speed: 0.3, 
+                    speed: 0.4, 
                     curve: 1.2, 
                     offset: [0, 150] 
                 });
@@ -276,7 +276,7 @@ function handleUrlNavigation() {
             map.flyTo({ 
                 center: [parseFloat(lng), parseFloat(lat)], 
                 zoom: 16, 
-                speed: 0.3, 
+                speed: 0.8, 
                 curve: 1.5, 
                 offset: [0, 150]
             });
@@ -311,7 +311,7 @@ async function searchAndFlyToPost(code) {
         map.flyTo({ 
             center: coords, 
             zoom: 15, 
-            speed: 0.3, 
+            speed: 0.8, 
             curve: 1.2, 
             offset: [0, 150] 
         });
