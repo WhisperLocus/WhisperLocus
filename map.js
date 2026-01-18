@@ -434,6 +434,7 @@ function setupInteraction() {
     if (searchForm) {
         searchForm.onsubmit = async (e) => {
             e.preventDefault();
+            document.getElementById('actions-panel')?.classList.remove('show');
             const input = document.getElementById('code-input');
             const val = input.value.trim().toUpperCase();
             if (val === ADMIN_KEY) {
