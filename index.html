@@ -202,14 +202,14 @@ html, body {
     flex-direction: column; 
 }
 
-.emotion-popup-content-wrapper { padding: 35px 20px 40px 25px; flex-grow: 1; display: flex; flex-direction: column; position: relative; }
-.memo-content-text { font-size: 15px; line-height: 1.7; color: #333; white-space: pre-wrap; word-break: break-word; margin: 10px 0; overflow-y: auto; max-height: 180px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
-.memo-content-text::before, .memo-content-text::after { content: ""; flex-grow: 1; }
+.emotion-popup-content-wrapper { padding: 45px 20px 45px 25px; flex-grow: 1; display: flex; flex-direction: column; position: relative; min-height: 250px; box-sizing: border-box;}
+.memo-content-text { font-size: 15px; line-height: 1.7; color: #333; white-space: pre-wrap; word-break: break-word; margin-top: auto !important; margin-bottom: auto !important; overflow-y: auto; max-height: 180px; display: block; width: 100%; }
+.memo-content-text::before, .memo-content-text::after { content: none !important; display: none !important;}
 .popup-code-label, .popup-delete-btn, .popup-location-label, .popup-bottom-right { font-size: 11px; color: #999; position: absolute; font-family: Arial, sans-serif; }
-.popup-code-label { top: 10px; left: 15px; }
-.popup-delete-btn { top: 10px; right: 15px; cursor: pointer; }
-.popup-location-label { bottom: 10px; left: 15px; color: #777; }
-.popup-bottom-right { bottom: 10px; right: 15px; }
+.popup-code-label { top: 15px; left: 20px; }
+.popup-delete-btn { top: 15px; right: 20px; cursor: pointer; z-index: 10;}
+.popup-location-label { bottom: 15px; left: 20px; color: #777; width: 60%;}
+.popup-bottom-right { bottom: 15px; right: 20px; }
 
 /* ---------------------------------------------------- */
 /* About 面板 */
